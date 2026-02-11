@@ -1,0 +1,42 @@
+{
+    "version": 3,
+    "vendor": {
+        "conan": {}
+    },
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 15,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "conan-linux-x86_64-release",
+            "displayName": "'conan-linux-x86_64-release' config",
+            "description": "'conan-linux-x86_64-release' configure using 'Unix Makefiles' generator",
+            "generator": "Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_POLICY_DEFAULT_CMP0091": "NEW",
+                "CMAKE_BUILD_TYPE": "Release"
+            },
+            "environment": {
+                "PATH": "/home/kijetesantakalu/.conan2/p/cmakee300763ec076c/p/bin:$penv{PATH}"
+            },
+            "cmakeExecutable": "/home/kijetesantakalu/.conan2/p/cmakee300763ec076c/p/bin/cmake",
+            "toolchainFile": "generators/conan_toolchain.cmake",
+            "binaryDir": "/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release"
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "conan-linux-x86_64-release",
+            "configurePreset": "conan-linux-x86_64-release",
+            "jobs": 8
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "conan-linux-x86_64-release",
+            "configurePreset": "conan-linux-x86_64-release"
+        }
+    ]
+}

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libModelTests.a CMakeFiles/ModelTests.dir/ModelTestfunctions.cpp.o CMakeFiles/ModelTests.dir/__/__/minimizer/MinimizeGSL.cpp.o CMakeFiles/ModelTests.dir/__/__/minimizer/Minimizer.cpp.o CMakeFiles/ModelTests.dir/__/__/minimizer/MinimizePlane.cpp.o CMakeFiles/ModelTests.dir/__/__/minimizer/LibNLOPT/MinimizeNLOPT.cpp.o
+/usr/bin/ranlib libModelTests.a

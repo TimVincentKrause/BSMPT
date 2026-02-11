@@ -1,0 +1,27 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/minimizer/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/minimizer/LibCMAES/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/minimizer/LibNLOPT/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/models/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/models/modeltests/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/ThermalFunctions/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/minimum_tracer/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/transition_tracer/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/bounce_solution/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/gravitational_waves/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/utility/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/utility/asciiplotter/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/src/utility/spline/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/standalone/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/tests/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/tests/catcheventlistener/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/tests/GenerateTestCompares/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/tests/unittests/cmake_install.cmake",
+		"/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/tests/benchmarks/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

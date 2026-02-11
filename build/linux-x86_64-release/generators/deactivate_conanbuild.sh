@@ -1,0 +1,1 @@
+. "/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/generators/deactivate_conanbuildenv-release-x86_64.sh"

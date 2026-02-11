@@ -1,0 +1,5 @@
+if(EXISTS "/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/tests/unittests/GenericTests-b12d07c_tests.cmake")
+  include("/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/tests/unittests/GenericTests-b12d07c_tests.cmake")
+else()
+  add_test(GenericTests_NOT_BUILT-b12d07c GenericTests_NOT_BUILT-b12d07c)
+endif()

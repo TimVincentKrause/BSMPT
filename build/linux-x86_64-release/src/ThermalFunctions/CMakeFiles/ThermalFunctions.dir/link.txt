@@ -1,0 +1,2 @@
+/usr/bin/ar qc libThermalFunctions.a CMakeFiles/ThermalFunctions.dir/thermalcoefficientcalculator.cpp.o CMakeFiles/ThermalFunctions.dir/ThermalFunctions.cpp.o CMakeFiles/ThermalFunctions.dir/NegativeBosonSpline.cpp.o
+/usr/bin/ranlib libThermalFunctions.a

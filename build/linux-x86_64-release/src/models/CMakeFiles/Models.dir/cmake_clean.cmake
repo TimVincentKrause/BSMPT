@@ -1,0 +1,43 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/Models.dir/ClassPotentialC2HDM.cpp.o"
+  "CMakeFiles/Models.dir/ClassPotentialC2HDM.cpp.o.d"
+  "CMakeFiles/Models.dir/ClassPotentialCPintheDark.cpp.o"
+  "CMakeFiles/Models.dir/ClassPotentialCPintheDark.cpp.o.d"
+  "CMakeFiles/Models.dir/ClassPotentialCxSM.cpp.o"
+  "CMakeFiles/Models.dir/ClassPotentialCxSM.cpp.o.d"
+  "CMakeFiles/Models.dir/ClassPotentialN2HDM.cpp.o"
+  "CMakeFiles/Models.dir/ClassPotentialN2HDM.cpp.o.d"
+  "CMakeFiles/Models.dir/ClassPotentialOrigin.cpp.o"
+  "CMakeFiles/Models.dir/ClassPotentialOrigin.cpp.o.d"
+  "CMakeFiles/Models.dir/ClassPotentialOrigin_deprecated.cpp.o"
+  "CMakeFiles/Models.dir/ClassPotentialOrigin_deprecated.cpp.o.d"
+  "CMakeFiles/Models.dir/ClassPotentialR2HDM.cpp.o"
+  "CMakeFiles/Models.dir/ClassPotentialR2HDM.cpp.o.d"
+  "CMakeFiles/Models.dir/ClassPotentialRxSM.cpp.o"
+  "CMakeFiles/Models.dir/ClassPotentialRxSM.cpp.o.d"
+  "CMakeFiles/Models.dir/ClassPotentialRxSMnoZ2.cpp.o"
+  "CMakeFiles/Models.dir/ClassPotentialRxSMnoZ2.cpp.o.d"
+  "CMakeFiles/Models.dir/ClassPotentialSM.cpp.o"
+  "CMakeFiles/Models.dir/ClassPotentialSM.cpp.o.d"
+  "CMakeFiles/Models.dir/ClassTemplate.cpp.o"
+  "CMakeFiles/Models.dir/ClassTemplate.cpp.o.d"
+  "CMakeFiles/Models.dir/IncludeAllModels.cpp.o"
+  "CMakeFiles/Models.dir/IncludeAllModels.cpp.o.d"
+  "CMakeFiles/Models.dir/SMParam.cpp.o"
+  "CMakeFiles/Models.dir/SMParam.cpp.o.d"
+  "CMakeFiles/Models.dir/__/minimizer/LibNLOPT/MinimizeNLOPT.cpp.o"
+  "CMakeFiles/Models.dir/__/minimizer/LibNLOPT/MinimizeNLOPT.cpp.o.d"
+  "CMakeFiles/Models.dir/__/minimizer/MinimizeGSL.cpp.o"
+  "CMakeFiles/Models.dir/__/minimizer/MinimizeGSL.cpp.o.d"
+  "CMakeFiles/Models.dir/__/minimizer/MinimizePlane.cpp.o"
+  "CMakeFiles/Models.dir/__/minimizer/MinimizePlane.cpp.o.d"
+  "CMakeFiles/Models.dir/__/minimizer/Minimizer.cpp.o"
+  "CMakeFiles/Models.dir/__/minimizer/Minimizer.cpp.o.d"
+  "libModels.a"
+  "libModels.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/Models.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

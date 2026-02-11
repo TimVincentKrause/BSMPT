@@ -1,0 +1,2 @@
+/usr/bin/ar qc libUtility.a CMakeFiles/Utility.dir/utility.cpp.o CMakeFiles/Utility.dir/Logger.cpp.o CMakeFiles/Utility.dir/parser.cpp.o CMakeFiles/Utility.dir/const_velocity_spline.cpp.o CMakeFiles/Utility.dir/NumericalDerivatives.cpp.o CMakeFiles/Utility.dir/ModelIDs.cpp.o
+/usr/bin/ranlib libUtility.a

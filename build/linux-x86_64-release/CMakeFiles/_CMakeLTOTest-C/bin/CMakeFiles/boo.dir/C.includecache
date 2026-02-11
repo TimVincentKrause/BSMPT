@@ -1,0 +1,10 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/kijetesantakalu/thesis/testBSMPT2/BSMPT/build/linux-x86_64-release/CMakeFiles/_CMakeLTOTest-C/src/main.c
+

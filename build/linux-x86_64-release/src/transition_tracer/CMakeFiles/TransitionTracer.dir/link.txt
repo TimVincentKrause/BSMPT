@@ -1,0 +1,2 @@
+/usr/bin/ar qc libTransitionTracer.a CMakeFiles/TransitionTracer.dir/transition_tracer.cpp.o CMakeFiles/TransitionTracer.dir/__/minimizer/MinimizeGSL.cpp.o CMakeFiles/TransitionTracer.dir/__/minimizer/Minimizer.cpp.o CMakeFiles/TransitionTracer.dir/__/minimizer/MinimizePlane.cpp.o CMakeFiles/TransitionTracer.dir/__/minimizer/LibNLOPT/MinimizeNLOPT.cpp.o
+/usr/bin/ranlib libTransitionTracer.a

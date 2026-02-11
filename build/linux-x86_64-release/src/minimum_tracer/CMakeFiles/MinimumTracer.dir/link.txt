@@ -1,0 +1,2 @@
+/usr/bin/ar qc libMinimumTracer.a CMakeFiles/MinimumTracer.dir/minimum_tracer.cpp.o CMakeFiles/MinimumTracer.dir/__/minimizer/MinimizeGSL.cpp.o CMakeFiles/MinimumTracer.dir/__/minimizer/Minimizer.cpp.o CMakeFiles/MinimumTracer.dir/__/minimizer/MinimizePlane.cpp.o CMakeFiles/MinimumTracer.dir/__/minimizer/LibNLOPT/MinimizeNLOPT.cpp.o
+/usr/bin/ranlib libMinimumTracer.a

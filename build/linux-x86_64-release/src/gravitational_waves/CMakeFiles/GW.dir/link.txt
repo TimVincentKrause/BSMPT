@@ -1,0 +1,2 @@
+/usr/bin/ar qc libGW.a CMakeFiles/GW.dir/gw.cpp.o CMakeFiles/GW.dir/__/minimizer/MinimizeGSL.cpp.o CMakeFiles/GW.dir/__/minimizer/Minimizer.cpp.o CMakeFiles/GW.dir/__/minimizer/MinimizePlane.cpp.o CMakeFiles/GW.dir/__/minimizer/LibNLOPT/MinimizeNLOPT.cpp.o
+/usr/bin/ranlib libGW.a

@@ -1,0 +1,1 @@
+/usr/bin/gcc-13 -m64 -flto=auto -fno-fat-lto-objects -m64 CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a

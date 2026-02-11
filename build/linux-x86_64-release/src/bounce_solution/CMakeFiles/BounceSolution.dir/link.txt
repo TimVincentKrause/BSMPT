@@ -1,0 +1,2 @@
+/usr/bin/ar qc libBounceSolution.a CMakeFiles/BounceSolution.dir/bounce_solution.cpp.o CMakeFiles/BounceSolution.dir/action_calculation.cpp.o CMakeFiles/BounceSolution.dir/gstar.cpp.o CMakeFiles/BounceSolution.dir/__/minimizer/MinimizeGSL.cpp.o CMakeFiles/BounceSolution.dir/__/minimizer/Minimizer.cpp.o CMakeFiles/BounceSolution.dir/__/minimizer/MinimizePlane.cpp.o CMakeFiles/BounceSolution.dir/__/minimizer/LibNLOPT/MinimizeNLOPT.cpp.o
+/usr/bin/ranlib libBounceSolution.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libASCIIPlotter.a CMakeFiles/ASCIIPlotter.dir/asciiplotter.cpp.o
+/usr/bin/ranlib libASCIIPlotter.a
