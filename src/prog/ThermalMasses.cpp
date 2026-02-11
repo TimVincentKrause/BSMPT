@@ -548,18 +548,37 @@ try
         std::cout << HiggsRot << std::endl;
 
 
-        std::cout << "-----" << std::endl;
-        std::cout << "-----" << std::endl;
-
-
 
         double s2 = HiggsRot(0,2);
-        double s1 = HiggsRot(0,1) / (std::sqrt(1 - s2*s2));
-        double s3 = HiggsRot(1,2) / (std::sqrt(1 - s2*s2));
+        double s1, s3;
+
+        if (s2 == 1)
+        {
+          s1 = 1; s3=1;
+        }
+        else
+        {
+        s1 = HiggsRot(0,1) / (std::sqrt(1 - s2*s2));
+        s3 = HiggsRot(1,2) / (std::sqrt(1 - s2*s2));
+        }
 
         double a1 = std::asin(s1);
         double a2 = std::asin(s2);
         double a3 = std::asin(s3);
+
+        std::cout << "sines" << std::endl;
+        std::cout << "s1 = " << s1 << std::endl;
+        std::cout << "s2 = " << s2 << std::endl;
+        std::cout << "s3 = " << s3 << std::endl;
+
+        std::cout << "angles" << std::endl;
+        std::cout << "a1 = " << a1 << std::endl;
+        std::cout << "a2 = " << a2 << std::endl;
+        std::cout << "a3 = " << a3 << std::endl;
+
+        std::cout << "-----" << std::endl;
+        std::cout << "-----" << std::endl;
+
 
         for (size_t i = 0; i<5;i++){
           outfile << sep

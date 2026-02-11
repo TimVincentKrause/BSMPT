@@ -36,22 +36,14 @@ HessianNumerical(const std::vector<double> &phi,
   {
     double val = 0;
     auto xp    = phi;
-    xp[i] += 4 * eps; //EU!!!
-    val -= V(xp) / 12;
-
-    xp = phi;
     xp[i] += 2 * eps;
-    val += 4/3 * V(xp);
+    val += V(xp);
 
-    val -= 5/2 * V(phi);
+    val -= 2 * V(phi);
 
     xp = phi;
     xp[i] -= 2 * eps;
-    val += 4/3 * V(xp);
-
-    xp = phi;
-    xp[i] -= 4 * eps;
-    val -= V(xp) / 12;
+    val += V(xp);
 
     result[i][i] = val / (4 * eps * eps);
 
@@ -60,97 +52,28 @@ HessianNumerical(const std::vector<double> &phi,
     {
       double r = 0;
 
-      // Coefficients are 1/12, -2/3, 2/3, -1/12 for -2h, -h, +h, +2h
-
-      xp = phi; // F(x+2h, y+2h)
-      xp[i] += 2*eps;
-      xp[j] += 2*eps;
-      r += V(xp) /12. /12.;
-
-      xp = phi; // F(x+2h, y+h)
-      xp[i] += 2*eps;
-      xp[j] += eps;
-      r += -V(xp) /12. * 2/3.;
-
-      xp = phi; // F(x+2h, y-h)
-      xp[i] += 2*eps;
-      xp[j] -= eps;
-      r += V(xp) /12. * 2/3.;
-
-      xp = phi; // F(x+2h, y-2h)
-      xp[i] += 2*eps;
-      xp[j] -= 2*eps;
-      r += -V(xp) /12. /12.;
-    
-
-
-      xp = phi; // F(x+h, y+2h)
-      xp[i] += eps;
-      xp[j] += 2*eps;
-      r += -V(xp) * 2/3. /12.;
-
       xp = phi; // F(x+h, y+h)
       xp[i] += eps;
       xp[j] += eps;
-      r += V(xp) * 2/3. * 2/3.;
+      r += V(xp);
 
-      xp = phi; // F(x+h, y-h)
+      xp = phi; //-F(x+h, y-h)
       xp[i] += eps;
       xp[j] -= eps;
-      r += -V(xp) * 2/3. * 2/3.;
+      r -= V(xp);
 
-      xp = phi; // F(x+h, y-2h)
-      xp[i] += eps;
-      xp[j] -= 2*eps;
-      r += V(xp) * 2/3. /12.;
-
-
-
-      xp = phi; // F(x-h, y+2h)
-      xp[i] -= eps;
-      xp[j] += 2*eps;
-      r += V(xp) * 2/3. /12.;
-
-      xp = phi; // F(x-h, y+h)
+      xp = phi; //-F(x-h, y+h)
       xp[i] -= eps;
       xp[j] += eps;
-      r += -V(xp) * 2/3. * 2/3.;
+      r -= V(xp);
 
       xp = phi; // F(x-h, y-h)
       xp[i] -= eps;
       xp[j] -= eps;
-      r += V(xp) * 2/3. * 2/3.;
+      r += V(xp);
 
-      xp = phi; // F(x-h, y-2h)
-      xp[i] -= eps;
-      xp[j] -= 2*eps;
-      r += -V(xp) * 2/3. /12.;
-
-
-
-      xp = phi; // F(x-2h, y+2h)
-      xp[i] -= 2*eps;
-      xp[j] += 2*eps;
-      r += -V(xp) /12. /12.;
-
-      xp = phi; // F(x-2h, y+h)
-      xp[i] -= 2*eps;
-      xp[j] += eps;
-      r += V(xp) /12. * 2/3.;
-
-      xp = phi; // F(x-2h, y-h)
-      xp[i] -= 2*eps;
-      xp[j] -= eps;
-      r += -V(xp) /12. * 2/3.;
-
-      xp = phi; // F(x-2h, y-2h)
-      xp[i] -= 2*eps;
-      xp[j] -= 2*eps;
-      r += V(xp) /12. /12.;
-
-      result[i][j] = r / (eps * eps);
-      result[j][i] = r / (eps * eps);
-
+      result[i][j] = r / (4 * eps * eps);
+      result[j][i] = r / (4 * eps * eps);
     }
   }
 
