@@ -11,19 +11,7 @@
 /**
  * @file minimum tracer class
  */
-#include "Eigen/Eigenvalues"                   // Eigenvalues utility
-#include <BSMPT/minimizer/Minimizer.h>         // for Minimizer
 #include <BSMPT/models/ClassPotentialOrigin.h> // for Class_Potential_Origin
-#include <BSMPT/utility/Logger.h>              // for Logger Class
-#include <BSMPT/utility/asciiplotter/asciiplotter.h>
-#include <BSMPT/utility/utility.h>
-#include <Eigen/Dense> // Eigenvalues matrix
-#include <chrono>
-#include <cmath>    // std::pow
-#include <memory>   // for shared_ptr
-#include <optional> // std::optional
-#include <stdlib.h> // std::strtol
-
 namespace BSMPT
 {
 
@@ -964,6 +952,16 @@ struct Vacuum
    * phase.
    */
   int MinimumFoundAlready(const Minimum &minimum);
+
+  /**
+   * @brief If the global minimizer, incorrectly, finds a high temperature
+   * non-global minimum and but then another phase turns out to be the minimum
+   * at high temperature will break our logic. This is a safety check to ensure
+   * that at high temperature \f$ T_{high} \f$ the Universe is on the global
+   * minimum.
+   *
+   */
+  void EnsureHighTemperatureGlobalMininum();
 
   /**
    * @brief MultiStepPTMode0 single-step PT mode
