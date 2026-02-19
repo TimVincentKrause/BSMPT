@@ -1,0 +1,82 @@
+--usegsl not set, using default value: true
+--usecmaes not set, using default value: true
+--usenlopt not set, using default value: true
+--usemultithreading not set, using default value: false
+--multistepmode not set, using default value: default
+--num_check_pts not set, using default value: 10
+--checkewsr not set, using default value: on
+
+Found file
+Created modelpointer 
+Currently at line 2
+Creating outfile with name output/cpvdm_MinTraOut_L15_m268_ms6m2200_A-11_0.tsv_1.tsv
+Model = cpinthedark
+The parameters are : 
+m11s = -7823.7540499999996
+m22s = 69916380.966131285
+mSs = 46057469.063803241
+ReA = -0.649204840206968
+ImA = 0.071983019639832904
+L1 = 0.25810698810286958
+L2 = 3.0762823948887785
+L3 = 5.1679963369179553
+L4 = 1.910860366639151
+L5 = 3.3896006299546086
+L6 = 11.936088751207548
+L7 = -1.2460995004621842
+L8 = -5.7105144007361179
+The counterterm parameters are : 
+dm11s = -31784292.005866632
+dm22s = -20187332.100242395
+dmSs = -28087472.089822229
+dReA = 0.28695804747951204
+dImA = 0.024305910568272766
+dL1 = -3.9984836820881919
+dL2 = 0
+dL3 = 0
+dL4 = -3.811794759671185
+dL5 = -4.6304867431067693
+dL6 = 0
+dL7 = 0
+dL8 = 0
+dTCB = -0
+dT1 = 2.86102294921875e-06
+dT2 = -0
+dTCP = -0
+dTS = -0
+dImL5 = 1.8719673372971566e-10
+The scale is given by mu = 246.21965079413735 GeV 
+The mass spectrum is given by :
+m_{G^+} = 0 GeV 
+m_{G^-} = 0 GeV 
+m_{H^+} = 8370.9637182327715 GeV 
+m_{H^-} = 8370.9637182327715 GeV 
+m_{hSM} = 125.08999999999995 GeV 
+m_{G^0} = 0 GeV 
+m_{h_1} = 6783.7819261921122 GeV 
+m_{h_2} = 8368.2859601611799 GeV 
+m_{h_3} = 8380.5549610594862 GeV 
+
+Flat directions encountered!
+Field index (0	2) identified as 2D flat direction.
+Field index (0	3) identified as 2D flat direction.
+Field index (2	3) identified as 2D flat direction.
+Choosing minimal set of field directions as: 1	1	0	0	1
+NLopt candidate at T = 0 :  0	246.212	0	0	0 with potential value 1.89052e+14
+
+GSL found a minimum at T = 0: (3.42982e-05	-246.218	-6.92976e-06	2.58537e-05	-8.6985e-06) with Potential value = 1.89052e+14
+
+Status of NLO stability check is: success
+Starting symmetry restoration check
+Smallest eigenvalue at high temperature is	-0.625610
+Potential not bounded from below at high temperature.
+Track phases in between T_low = 0.000000 and T_high = 300.000000
+NLopt candidate at T = 300 :  0	0	0	0	0 with potential value 1.88894e+14
+
+GSL found a minimum at T = 300: (3.31747e-06	-0.000336501	3.25841e-05	-2.30749e-06	7.66543e-06) with Potential value = 1.88894e+14
+
+-------------------------------------------------------
+NLopt candidate at T = 300 :  0	0	0	0	0 with potential value 1.88894e+14
+
+GSL found a minimum at T = 300: (3.31747e-06	-0.000336501	3.25841e-05	-2.30749e-06	7.66543e-06) with Potential value = 1.88894e+14
+
