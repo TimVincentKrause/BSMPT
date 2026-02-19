@@ -126,6 +126,7 @@ public:
   void write() const override;
 
   void TripleHiggsCouplings() override;
+  void TripleHiggsCouplingsGeneral(std::vector<std::vector<double>> &ThermHiggsRotMatrix) override { return; }; //EU!!!
   std::vector<double> calc_CT() const override;
 
   void SetCurvatureArrays() override;

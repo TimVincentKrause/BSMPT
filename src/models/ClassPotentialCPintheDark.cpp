@@ -203,7 +203,7 @@ void Class_Potential_CPintheDark::ReadAndSet(const std::string &linestr,
     else if (k == 19)
       lL5 = tmp;
     else if (k == 20)
-      lL6 = tmp;
+      lL6 = tmp/2; //EU!!!/2;   /// just change that -> to be consistent w/ ScannerS and RelExt
     else if (k == 21)
       lL7 = tmp;
     else if (k == 22)
@@ -1457,6 +1457,160 @@ void Class_Potential_CPintheDark::TripleHiggsCouplings()
     }
   }
 }
+
+
+
+// mass basis triple couplings
+void Class_Potential_CPintheDark::TripleHiggsCouplingsGeneral(std::vector<std::vector<double>> &ThermHiggsRotMatrix)
+{
+  if (!SetCurvatureDone) SetCurvatureArrays();
+  if (!CalcCouplingsdone) CalculatePhysicalCouplings();
+
+  // position indices store the position of the physical fields
+  std::size_t posGp  = 0;
+  std::size_t posGm  = 0;
+  std::size_t posHp  = 0;
+  std::size_t posHm  = 0;
+  std::size_t posHSM = 0;
+  std::size_t posG0  = 0;
+  std::size_t posh1  = 0;
+  std::size_t posh2  = 0;
+  std::size_t posh3  = 0;
+
+  MatrixXd HiggsRot(NHiggs, NHiggs);
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      HiggsRot(i, j) = ThermHiggsRotMatrix[i][j];
+    }
+  }
+
+  const double ZeroThreshold = 1e-5;
+
+  for (size_t i = 0; i < NHiggs; i++)
+  {
+    // the rotation matrix is diagonal besides for the neutral dark scalars
+    if (std::abs(HiggsRot(i, 0)) > ZeroThreshold)
+      posGp = i;
+    else if (std::abs(HiggsRot(i, 1)) > ZeroThreshold)
+      posGm = i;
+    else if (std::abs(HiggsRot(i, 2)) > ZeroThreshold)
+      posHp = i;
+    else if (std::abs(HiggsRot(i, 3)) > ZeroThreshold)
+      posHm = i;
+    else if (std::abs(HiggsRot(i, 4)) > ZeroThreshold)
+      posHSM = i;
+    else if (std::abs(HiggsRot(i, 5)) > ZeroThreshold)
+      posG0 = i;
+
+    // the neutral dark scalars mix
+    if ((std::abs(HiggsRot(i, 6)) + std::abs(HiggsRot(i, 7)) +
+         std::abs(HiggsRot(i, 8))) > ZeroThreshold)
+    {
+      // use that scalars are sorted by mass
+      if (posh1 == 0)
+      {
+        posh1 = i;
+      }
+      else
+      {
+        if (posh2 == 0)
+        {
+          posh2 = i;
+        }
+        else
+        {
+          posh3 = i;
+        }
+      }
+    }
+  }
+
+  // new rotation matrix with
+  MatrixXd HiggsRotSort(NHiggs, NHiggs);
+
+  HiggsRotSort.row(0) = HiggsRot.row(posGp);
+  HiggsRotSort.row(1) = HiggsRot.row(posGm);
+  HiggsRotSort.row(2) = HiggsRot.row(posHp);
+  HiggsRotSort.row(3) = HiggsRot.row(posHm);
+  HiggsRotSort.row(4) = HiggsRot.row(posHSM);
+  HiggsRotSort.row(5) = HiggsRot.row(posG0);
+  HiggsRotSort.row(6) = HiggsRot.row(posh1);
+  HiggsRotSort.row(7) = HiggsRot.row(posh2);
+  HiggsRotSort.row(8) = HiggsRot.row(posh3);
+
+  // isn't here the DM matrix convention missing?
+
+  std::vector<double> TripleDeriv;
+  TripleDeriv = WeinbergThirdDerivative();
+  std::vector<std::vector<std::vector<double>>> GaugeBasis(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        GaugeBasis[i][j][k] =
+            TripleDeriv.at(i + j * NHiggs + k * NHiggs * NHiggs);
+      }
+    }
+  }
+
+  TripleHiggsCorrectionsCWPhysical.resize(NHiggs);
+  TripleHiggsCorrectionsTreePhysical.resize(NHiggs);
+  TripleHiggsCorrectionsCTPhysical.resize(NHiggs);
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    TripleHiggsCorrectionsTreePhysical[i].resize(NHiggs);
+    TripleHiggsCorrectionsCWPhysical[i].resize(NHiggs);
+    TripleHiggsCorrectionsCTPhysical[i].resize(NHiggs);
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      TripleHiggsCorrectionsCWPhysical[i][j].resize(NHiggs);
+      TripleHiggsCorrectionsTreePhysical[i][j].resize(NHiggs);
+      TripleHiggsCorrectionsCTPhysical[i][j].resize(NHiggs);
+    }
+  }
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        TripleHiggsCorrectionsCWPhysical[i][j][k]   = 0;
+        TripleHiggsCorrectionsTreePhysical[i][j][k] = 0;
+        TripleHiggsCorrectionsCTPhysical[i][j][k]   = 0;
+        for (std::size_t l = 0; l < NHiggs; l++)
+        {
+          for (std::size_t m = 0; m < NHiggs; m++)
+          {
+            for (std::size_t n = 0; n < NHiggs; n++)
+            {
+              double RotFac =
+                  HiggsRotSort(i, l) * HiggsRotSort(j, m) * HiggsRotSort(k, n);
+              TripleHiggsCorrectionsCWPhysical[i][j][k] +=
+                  RotFac * GaugeBasis[l][m][n];
+              TripleHiggsCorrectionsTreePhysical[i][j][k] +=
+                  RotFac * LambdaHiggs_3[l][m][n];
+              TripleHiggsCorrectionsCTPhysical[i][j][k] +=
+                  RotFac * LambdaHiggs_3_CT[l][m][n];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+
 
 void Class_Potential_CPintheDark::SetCurvatureArrays()
 {

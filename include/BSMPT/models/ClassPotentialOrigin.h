@@ -1000,6 +1000,16 @@ public:
    * Calculates the function f_{ab}^{(1)} (see https://arxiv.org/abs/1606.07069
    * eq 3.9) needed for the derivatives of the Coleman Weinberg potential.
    */
+
+  /** //EU!!!
+  * These functions do the same as their named ones but with a general input matrix 
+  *
+  *  
+  */
+  virtual void TripleHiggsCouplingsGeneral(std::vector<std::vector<double>> &ThermHiggsRotMatrix) = 0; //EU!!!
+
+
+
   double fbase(double MassSquaredA, double MassSquaredB) const;
   /**
    * Calculates the function f_{abc}^{(1)} (see https://arxiv.org/abs/1606.07069
