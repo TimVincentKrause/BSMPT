@@ -76,7 +76,7 @@ std::vector<double> MinimumTracer::LocateMinimum(
   std::vector<double> guess = guess_In;
 
   // CPintheDarkCoded
-  double errorHeavy = 10*error / 4;
+  double errorHeavy = 2*error / 4;
   double errorLight = error;
 
   std::vector<double> grad = df(guess);
@@ -361,7 +361,7 @@ MinimumTracer::TrackPhase(double &globMinEndT,
     double LengthGradientHeavy = sqrt(pow(grad.at(0),2) + pow(grad.at(2),2) + pow(grad.at(3),2) + pow(grad.at(4),2) ) / (dim -1.) ;
     double LengthGradientLight = abs(grad.at(1));
 
-    double GradientThresholdHeavy = 10*GradientThreshold;
+    double GradientThresholdHeavy = 2*GradientThreshold;
     double GradientThresholdLight = GradientThreshold;
 
     // Calculate the length of the gradient in the normal potential divided
@@ -393,7 +393,7 @@ MinimumTracer::TrackPhase(double &globMinEndT,
 
       ss << "\n\033[1;95m.-> | T = " << currentT
          << " |Grad|/dim =  " << LengthGradient << " | Distance = " << Distance
-         << " Grad =  (" << grad.at(0)
+         << " | Grad =  (" << grad.at(0)
          << ", " << grad.at(1)
          << ", " << grad.at(2)
          << ", " << grad.at(3)
@@ -405,10 +405,11 @@ MinimumTracer::TrackPhase(double &globMinEndT,
 
       if (initialT == currentT)
       {
+        grad = dV(point);
         ss << "Could not locate the starting minimum at T = " << initialT
            << " GeV.";
         ss << " |Grad|/dim =  " << L2NormVector(dV(point)) / dim
-           << " Grad =  (" << grad.at(0)
+           << " | Grad =  (" << grad.at(0)
            << ", " << grad.at(1)
            << ", " << grad.at(2)
            << ", " << grad.at(3)
@@ -631,7 +632,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
     double LengthGradientHeavy = sqrt(pow(grad.at(0),2) + pow(grad.at(2),2) + pow(grad.at(3),2) + pow(grad.at(4),2) ) / (dim -1.) ;
     double LengthGradientLight = abs(grad.at(1));
 
-    double GradientThresholdHeavy = 10*GradientThreshold;
+    double GradientThresholdHeavy = 2*GradientThreshold;
     double GradientThresholdLight = GradientThreshold;
 
     // Calculate the length of the gradient in the normal potential divided
@@ -663,7 +664,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
 
       ss << "\n\033[1;95m.-> | T = " << currentT
          << " |Grad|/dim =  " << LengthGradient << " | Distance = " << Distance
-         << " Grad =  (" << grad.at(0)
+         << " | Grad =  (" << grad.at(0)
          << ", " << grad.at(1)
          << ", " << grad.at(2)
          << ", " << grad.at(3)
@@ -675,11 +676,12 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
 
       if (initialT == currentT)
       {
+        grad = dV(point);
         ss << "Could not locate the starting minimum at T = " << initialT
            << " GeV.";
         ss << " |Grad|/dim =  " << L2NormVector(dV(point)) / dim
            << " | Distance = " << Distance
-           << " Grad =  (" << grad.at(0)
+           << " | Grad =  (" << grad.at(0)
            << ", " << grad.at(1)
            << ", " << grad.at(2)
            << ", " << grad.at(3)
