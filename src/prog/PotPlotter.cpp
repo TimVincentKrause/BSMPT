@@ -25,6 +25,7 @@
 #include <string>   // for getline, operator<<
 #include <utility>  // for pair
 #include <vector>   // for vector
+#include <BSMPT/utility/NumericalDerivatives.h> // for derivatives
 
 using namespace std;
 using namespace BSMPT;
@@ -124,7 +125,33 @@ try
       for (auto x : modelPointer->addLegendVEV())
         outfile << std::setprecision(16) << x << sep;
 
-      outfile << "Veff(v,T)" << sep << "T" << std::endl;
+      outfile << "Veff(v,T)" << sep;
+
+
+      for (std::size_t i=0; i<modelPointer->get_nVEV();i++)
+      {
+        outfile << "dVeff(v,T)_w" << i << sep;
+      }
+
+      for (std::size_t i=0; i<modelPointer->get_nVEV();i++)
+      {
+        outfile << "dVeff(v,T)o6_w" << i << sep;
+      }
+
+      for (std::size_t i=0; i<modelPointer->get_nVEV();i++)
+      {
+        outfile << "dVeff(v,T)o8_w" << i << sep;
+      }
+
+      for (std::size_t i=0; i<modelPointer->get_nVEV();i++)
+      {
+        for (std::size_t j=0; j<modelPointer->get_nVEV();j++)
+        {
+          outfile << "d2Veff(v,T)_w" << i << "_w" << j << sep;
+        }
+      }
+      
+      outfile << "T" << std::endl;
 
       Logger::Write(LoggingLevel::ProgDetailed,
                     "Evaluating slice between start minimum at (" +
@@ -137,10 +164,44 @@ try
           Create1DimGrid(args.min_start, args.min_end, args.npoints);
       for (auto point : grid_points)
       {
+        // Numerics
+        double eps = 0.1;
+
+        // Define effective potential
+        std::function<double(std::vector<double>)> Veff;
+        Veff = [&](std::vector<double> effvev)
+        {
+          // Potential wrapper
+          return modelPointer->VEff(modelPointer->MinimizeOrderVEV(effvev), temp);
+        };
+
+        // Calculate Gradient
+        std::vector<double> VeffGradient;
+        VeffGradient = NablaNumerical(point,Veff, eps);
+
+        // Calculate Gradient to o6 accuracy
+        std::vector<double> VeffGradiento6;
+        VeffGradiento6 = NablaNumericalo6(point,Veff, eps);
+
+
+        // Calculate Gradient to o8 accuracy
+        std::vector<double> VeffGradiento8;
+        VeffGradiento8 = NablaNumericalo8(point,Veff, eps);
+
+
+        // Calculate Hessian
+        std::vector<std::vector<double>> VeffHessian;
+        VeffHessian = HessianNumerical(point,Veff, eps);
+
+
         outfile << point << sep
                 << modelPointer->VEff(modelPointer->MinimizeOrderVEV(point),
-                                      temp)
-                << sep << temp << std::endl;
+                                      temp) << sep
+                << VeffGradient << sep
+                << VeffGradiento6 << sep
+                << VeffGradiento8 << sep
+                << VeffHessian << sep
+                << temp << std::endl;
       }
     }
     else

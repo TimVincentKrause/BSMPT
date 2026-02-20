@@ -76,7 +76,7 @@ std::vector<double> MinimumTracer::LocateMinimum(
   std::vector<double> guess = guess_In;
 
   // CPintheDarkCoded
-  double errorHeavy = 2*error / 4;
+  double errorHeavy = 1000*error / 4;
   double errorLight = error;
 
   std::vector<double> grad = df(guess);
@@ -361,7 +361,7 @@ MinimumTracer::TrackPhase(double &globMinEndT,
     double LengthGradientHeavy = sqrt(pow(grad.at(0),2) + pow(grad.at(2),2) + pow(grad.at(3),2) + pow(grad.at(4),2) ) / (dim -1.) ;
     double LengthGradientLight = abs(grad.at(1));
 
-    double GradientThresholdHeavy = 2*GradientThreshold;
+    double GradientThresholdHeavy = 1000*GradientThreshold;
     double GradientThresholdLight = GradientThreshold;
 
     // Calculate the length of the gradient in the normal potential divided
@@ -632,7 +632,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
     double LengthGradientHeavy = sqrt(pow(grad.at(0),2) + pow(grad.at(2),2) + pow(grad.at(3),2) + pow(grad.at(4),2) ) / (dim -1.) ;
     double LengthGradientLight = abs(grad.at(1));
 
-    double GradientThresholdHeavy = 2*GradientThreshold;
+    double GradientThresholdHeavy = 1000*GradientThreshold;
     double GradientThresholdLight = GradientThreshold;
 
     // Calculate the length of the gradient in the normal potential divided

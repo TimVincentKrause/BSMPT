@@ -30,6 +30,19 @@ NablaNumerical(const std::vector<double> &phi,
                const std::function<double(std::vector<double>)> &f,
                const double &eps);
 
+
+// same as NablaNumerical but with order 6 accuracy;
+std::vector<double>
+NablaNumericalo6(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps);
+
+// same as NablaNumerical but with order 8 accuracy;
+std::vector<double>
+NablaNumericalo8(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps);
+
 /**
  * @brief Numerical method to calculate the potential's (or other functions's)
  * hessian matrix using finite differences method.
