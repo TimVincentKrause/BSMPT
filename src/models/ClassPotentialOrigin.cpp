@@ -75,6 +75,27 @@ void Class_Potential_Origin::Prepare_Triple()
   }
 }
 
+void Class_Potential_Origin::Prepare_Triple(const std::vector<double> &vev)
+{
+  for (std::size_t a = 0; a < NHiggs; a++)
+  {
+    for (std::size_t b = 0; b < NHiggs; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        LambdaHiggs_3_CT[a][b][i] = Curvature_Higgs_CT_L3[a][b][i];
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          LambdaHiggs_3_CT[a][b][i] +=
+              Curvature_Higgs_CT_L4[a][b][i][j] * vev[j];
+        }
+      }
+    }
+  }
+}
+
+
+
 double Class_Potential_Origin::FCW(double MassSquared) const
 {
   double res = 0;
@@ -1398,6 +1419,474 @@ void Class_Potential_Origin::CalculatePhysicalCouplings()
   return;
 }
 
+
+// just changed all HiggsVev instances to vev;
+void Class_Potential_Origin::CalculatePhysicalCouplings(const std::vector<double> &vev)
+{
+  if (!SetCurvatureDone) SetCurvatureArrays();
+  const double ZeroMass = std::pow(10, -5);
+  MatrixXd MassHiggs(NHiggs, NHiggs), MassGauge(NGauge, NGauge);
+  MatrixXcd MassQuark(NQuarks, NQuarks), MassLepton(NLepton, NLepton);
+  MassHiggs  = MatrixXd::Zero(NHiggs, NHiggs);
+  MassGauge  = MatrixXd::Zero(NGauge, NGauge);
+  MassQuark  = MatrixXcd::Zero(NQuarks, NQuarks);
+  MassLepton = MatrixXcd::Zero(NLepton, NLepton);
+
+  MassSquaredGauge.resize(NGauge);
+  MassSquaredHiggs.resize(NHiggs);
+  MassSquaredQuark.resize(NQuarks);
+  MassSquaredLepton.resize(NLepton);
+  HiggsRotationMatrix.resize(NHiggs);
+  for (std::size_t i = 0; i < NHiggs; i++)
+    HiggsRotationMatrix[i].resize(NHiggs);
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      MassHiggs(i, j) += Curvature_Higgs_L2[i][j];
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        MassHiggs(i, j) += Curvature_Higgs_L3[i][j][k] * vev[k];
+        for (std::size_t l = 0; l < NHiggs; l++)
+          MassHiggs(i, j) +=
+              0.5 * Curvature_Higgs_L4[i][j][k][l] * vev[k] * vev[l];
+      }
+    }
+  }
+
+  for (std::size_t a = 0; a < NGauge; a++)
+  {
+    for (std::size_t b = 0; b < NGauge; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          MassGauge(a, b) += 0.5 * Curvature_Gauge_G2H2[a][b][i][j] *
+                             vev[i] * vev[j];
+        }
+      }
+    }
+  }
+
+  MatrixXcd MIJQuarks = QuarkMassMatrix(vev);
+
+  MassQuark = MIJQuarks.conjugate() * MIJQuarks;
+
+  MatrixXcd MIJLeptons = LeptonMassMatrix(vev);
+
+  MassLepton = MIJLeptons.conjugate() * MIJLeptons;
+
+  MatrixXd HiggsRot(NHiggs, NHiggs), GaugeRot(NGauge, NGauge),
+      QuarkRot(NQuarks, NQuarks), LepRot(NLepton, NLepton);
+  HiggsRot = MatrixXd::Identity(NHiggs, NHiggs);
+  GaugeRot = MatrixXd::Identity(NGauge, NGauge);
+  QuarkRot = MatrixXd::Identity(NQuarks, NQuarks);
+  LepRot   = MatrixXd::Identity(NLepton, NLepton);
+
+  SelfAdjointEigenSolver<MatrixXd> es;
+
+  es.compute(MassHiggs);
+  HiggsRot = es.eigenvectors().transpose();
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      if (std::abs(HiggsRot(i, j)) < std::pow(10, -10)) HiggsRot(i, j) = 0;
+    }
+  }
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    MassSquaredHiggs[i] = es.eigenvalues()[i];
+    if (std::abs(MassSquaredHiggs[i]) < ZeroMass) MassSquaredHiggs[i] = 0;
+  }
+
+  es.compute(MassGauge);
+  GaugeRot = es.eigenvectors().transpose();
+
+  for (std::size_t i = 0; i < NGauge; i++)
+  {
+    MassSquaredGauge[i] = es.eigenvalues()[i];
+    if (std::abs(MassSquaredGauge[i]) < ZeroMass) MassSquaredGauge[i] = 0;
+  }
+
+  SelfAdjointEigenSolver<MatrixXcd> esQuark(MassQuark);
+  QuarkRot = esQuark.eigenvectors().transpose().real();
+  for (std::size_t i = 0; i < NQuarks; i++)
+    MassSquaredQuark[i] = esQuark.eigenvalues().real()[i];
+
+  SelfAdjointEigenSolver<MatrixXcd> esLepton(MassLepton);
+  LepRot = esLepton.eigenvectors().transpose().real();
+  for (std::size_t i = 0; i < NLepton; i++)
+    MassSquaredLepton[i] = esLepton.eigenvalues().real()[i];
+
+  for (std::size_t a = 0; a < NGauge; a++)
+  {
+    for (std::size_t b = 0; b < NGauge; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        LambdaGauge_3[a][b][i] = 0;
+        for (std::size_t j = 0; j < NHiggs; j++)
+          LambdaGauge_3[a][b][i] +=
+              Curvature_Gauge_G2H2[a][b][i][j] * vev[j];
+      }
+    }
+  }
+  for (std::size_t a = 0; a < NHiggs; a++)
+  {
+    for (std::size_t b = 0; b < NHiggs; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        LambdaHiggs_3[a][b][i] = Curvature_Higgs_L3[a][b][i];
+
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          LambdaHiggs_3[a][b][i] +=
+              Curvature_Higgs_L4[a][b][i][j] * vev[j];
+        }
+      }
+    }
+  }
+
+  for (std::size_t i = 0; i < NQuarks; i++)
+  {
+    for (std::size_t j = 0; j < NQuarks; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        LambdaQuark_3[i][j][k] = 0;
+        for (std::size_t l = 0; l < NQuarks; l++)
+        {
+          LambdaQuark_3[i][j][k] +=
+              conj(Curvature_Quark_F2H1[i][l][k]) * MIJQuarks(l, j);
+          LambdaQuark_3[i][j][k] +=
+              conj(MIJQuarks(i, l)) * Curvature_Quark_F2H1[l][j][k];
+        }
+        for (std::size_t m = 0; m < NHiggs; m++)
+        {
+          LambdaQuark_4[i][j][k][m] = 0;
+          for (std::size_t l = 0; l < NQuarks; l++)
+          {
+            LambdaQuark_4[i][j][k][m] += conj(Curvature_Quark_F2H1[i][l][k]) *
+                                         Curvature_Quark_F2H1[l][j][m];
+            LambdaQuark_4[i][j][k][m] += conj(Curvature_Quark_F2H1[i][l][m]) *
+                                         Curvature_Quark_F2H1[l][j][k];
+          }
+        }
+      }
+    }
+  }
+
+  for (std::size_t i = 0; i < NLepton; i++)
+  {
+    for (std::size_t j = 0; j < NLepton; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        LambdaLepton_3[i][j][k] = 0;
+        for (std::size_t l = 0; l < NLepton; l++)
+        {
+          LambdaLepton_3[i][j][k] +=
+              conj(Curvature_Lepton_F2H1[i][l][k]) * MIJLeptons(l, j);
+          LambdaLepton_3[i][j][k] +=
+              conj(MIJLeptons(i, l)) * Curvature_Lepton_F2H1[l][j][k];
+        }
+        for (std::size_t m = 0; m < NHiggs; m++)
+        {
+          LambdaLepton_4[i][j][k][m] = 0;
+          for (std::size_t l = 0; l < NLepton; l++)
+          {
+            LambdaLepton_4[i][j][k][m] += conj(Curvature_Lepton_F2H1[i][l][k]) *
+                                          Curvature_Lepton_F2H1[l][j][m];
+            LambdaLepton_4[i][j][k][m] += conj(Curvature_Lepton_F2H1[i][l][m]) *
+                                          Curvature_Lepton_F2H1[l][j][k];
+          }
+        }
+      }
+    }
+  }
+
+  // Rotate and save std::size_to corresponding vectors
+
+  Couplings_Higgs_Quartic.resize(NHiggs);
+  Couplings_Higgs_Triple.resize(NHiggs);
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    Couplings_Higgs_Quartic[i].resize(NHiggs);
+    Couplings_Higgs_Triple[i].resize(NHiggs);
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      Couplings_Higgs_Quartic[i][j].resize(NHiggs);
+      Couplings_Higgs_Triple[i][j].resize(NHiggs);
+      for (std::size_t k = 0; k < NHiggs; k++)
+        Couplings_Higgs_Quartic[i][j][k].resize(NHiggs);
+    }
+  }
+
+  Couplings_Gauge_Higgs_22.resize(NGauge);
+  Couplings_Gauge_Higgs_21.resize(NGauge);
+  for (std::size_t a = 0; a < NGauge; a++)
+  {
+    Couplings_Gauge_Higgs_22[a].resize(NGauge);
+    Couplings_Gauge_Higgs_21[a].resize(NGauge);
+    for (std::size_t b = 0; b < NGauge; b++)
+    {
+      Couplings_Gauge_Higgs_22[a][b].resize(NHiggs);
+      Couplings_Gauge_Higgs_21[a][b].resize(NHiggs);
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        Couplings_Gauge_Higgs_22[a][b][i].resize(NHiggs);
+      }
+    }
+  }
+
+  Couplings_Quark_Higgs_22.resize(NQuarks);
+  Couplings_Quark_Higgs_21.resize(NQuarks);
+  for (std::size_t a = 0; a < NQuarks; a++)
+  {
+    Couplings_Quark_Higgs_22[a].resize(NQuarks);
+    Couplings_Quark_Higgs_21[a].resize(NQuarks);
+    for (std::size_t b = 0; b < NQuarks; b++)
+    {
+      Couplings_Quark_Higgs_22[a][b].resize(NHiggs);
+      Couplings_Quark_Higgs_21[a][b].resize(NHiggs);
+      for (std::size_t i = 0; i < NHiggs; i++)
+        Couplings_Quark_Higgs_22[a][b][i].resize(NHiggs);
+    }
+  }
+
+  Couplings_Lepton_Higgs_22.resize(NLepton);
+  Couplings_Lepton_Higgs_21.resize(NLepton);
+  for (std::size_t a = 0; a < NLepton; a++)
+  {
+    Couplings_Lepton_Higgs_22[a].resize(NLepton);
+    Couplings_Lepton_Higgs_21[a].resize(NLepton);
+    for (std::size_t b = 0; b < NLepton; b++)
+    {
+      Couplings_Lepton_Higgs_22[a][b].resize(NHiggs);
+      Couplings_Lepton_Higgs_21[a][b].resize(NHiggs);
+      for (std::size_t i = 0; i < NHiggs; i++)
+        Couplings_Lepton_Higgs_22[a][b][i].resize(NHiggs);
+    }
+  }
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        Couplings_Higgs_Triple[i][j][k] = 0;
+        for (std::size_t is = 0; is < NHiggs; is++)
+        {
+          for (std::size_t js = 0; js < NHiggs; js++)
+          {
+            for (std::size_t ks = 0; ks < NHiggs; ks++)
+            {
+              Couplings_Higgs_Triple[i][j][k] +=
+                  HiggsRot(i, is) * HiggsRot(j, js) * HiggsRot(k, ks) *
+                  LambdaHiggs_3[is][js][ks];
+            }
+          }
+        }
+        for (std::size_t l = 0; l < NHiggs; l++)
+        {
+          Couplings_Higgs_Quartic[i][j][k][l] = 0;
+          for (std::size_t is = 0; is < NHiggs; is++)
+          {
+            for (std::size_t js = 0; js < NHiggs; js++)
+            {
+              for (std::size_t ks = 0; ks < NHiggs; ks++)
+              {
+                for (std::size_t ls = 0; ls < NHiggs; ls++)
+                {
+                  Couplings_Higgs_Quartic[i][j][k][l] +=
+                      HiggsRot(i, is) * HiggsRot(j, js) * HiggsRot(k, ks) *
+                      HiggsRot(l, ls) * Curvature_Higgs_L4[is][js][ks][ls];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Gauge Rot
+  for (std::size_t a = 0; a < NGauge; a++)
+  {
+    for (std::size_t b = 0; b < NGauge; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        Couplings_Gauge_Higgs_21[a][b][i] = 0;
+        for (std::size_t as = 0; as < NGauge; as++)
+        {
+          for (std::size_t bs = 0; bs < NGauge; bs++)
+          {
+            for (std::size_t is = 0; is < NHiggs; is++)
+              Couplings_Gauge_Higgs_21[a][b][i] +=
+                  GaugeRot(a, as) * GaugeRot(b, bs) * HiggsRot(i, is) *
+                  LambdaGauge_3[as][bs][is];
+          }
+        }
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          Couplings_Gauge_Higgs_22[a][b][i][j] = 0;
+          for (std::size_t as = 0; as < NGauge; as++)
+          {
+            for (std::size_t bs = 0; bs < NGauge; bs++)
+            {
+              for (std::size_t is = 0; is < NHiggs; is++)
+              {
+                for (std::size_t js = 0; js < NHiggs; js++)
+                {
+                  double RotFac = GaugeRot(a, as) * GaugeRot(b, bs) *
+                                  HiggsRot(i, is) * HiggsRot(j, js);
+                  Couplings_Gauge_Higgs_22[a][b][i][j] +=
+                      RotFac * Curvature_Gauge_G2H2[as][bs][is][js];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Quark
+
+  for (std::size_t a = 0; a < NQuarks; a++)
+  {
+    for (std::size_t b = 0; b < NQuarks; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        Couplings_Quark_Higgs_21[a][b][i] = 0;
+        for (std::size_t as = 0; as < NQuarks; as++)
+        {
+          for (std::size_t bs = 0; bs < NQuarks; bs++)
+          {
+            for (std::size_t is = 0; is < NHiggs; is++)
+            {
+              double RotFac =
+                  QuarkRot(a, as) * QuarkRot(b, bs) * HiggsRot(i, is);
+              Couplings_Quark_Higgs_21[a][b][i] +=
+                  RotFac * LambdaQuark_3[as][bs][is];
+            }
+          }
+        }
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          Couplings_Quark_Higgs_22[a][b][i][j] = 0;
+          for (std::size_t as = 0; as < NQuarks; as++)
+          {
+            for (std::size_t bs = 0; bs < NQuarks; bs++)
+            {
+              for (std::size_t is = 0; is < NHiggs; is++)
+              {
+                for (std::size_t js = 0; js < NHiggs; js++)
+                {
+                  double RotFac = QuarkRot(a, as) * QuarkRot(b, bs) *
+                                  HiggsRot(i, is) * HiggsRot(j, js);
+                  Couplings_Quark_Higgs_22[a][b][i][j] +=
+                      RotFac * LambdaQuark_4[as][bs][is][js];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Lepton
+
+  for (std::size_t a = 0; a < NLepton; a++)
+  {
+    for (std::size_t b = 0; b < NLepton; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        Couplings_Lepton_Higgs_21[a][b][i] = 0;
+        for (std::size_t as = 0; as < NLepton; as++)
+        {
+          for (std::size_t bs = 0; bs < NLepton; bs++)
+          {
+            for (std::size_t is = 0; is < NHiggs; is++)
+            {
+              double RotFac = LepRot(a, as) * LepRot(b, bs) * HiggsRot(i, is);
+              Couplings_Lepton_Higgs_21[a][b][i] +=
+                  RotFac * LambdaLepton_3[as][bs][is];
+            }
+          }
+        }
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          Couplings_Lepton_Higgs_22[a][b][i][j] = 0;
+          for (std::size_t as = 0; as < NLepton; as++)
+          {
+            for (std::size_t bs = 0; bs < NLepton; bs++)
+            {
+              for (std::size_t is = 0; is < NHiggs; is++)
+              {
+                for (std::size_t js = 0; js < NHiggs; js++)
+                {
+                  double RotFac = LepRot(a, as) * LepRot(b, bs) *
+                                  HiggsRot(i, is) * HiggsRot(j, js);
+                  Couplings_Lepton_Higgs_22[a][b][i][j] +=
+                      RotFac * LambdaLepton_4[as][bs][is][js];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      HiggsRotationMatrix[i][j] = HiggsRot(i, j);
+    }
+  }
+
+  CalcCouplingsdone = true;
+
+  return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 std::vector<double> Class_Potential_Origin::WeinbergFirstDerivative() const
 {
   std::vector<double> res;
@@ -1724,9 +2213,9 @@ std::vector<double> Class_Potential_Origin::WeinbergThirdDerivative() const
           {
             for (std::size_t c = 0; c < NHiggs; c++)
             {
-              double f1 = fbaseTri(MassSquaredHiggs[a],
-                                   MassSquaredHiggs[b],
-                                   MassSquaredHiggs[c]);
+              double f1 = fbaseTri(std::abs(MassSquaredHiggs[a]),
+                                   std::abs(MassSquaredHiggs[b]),
+                                   std::abs(MassSquaredHiggs[c]));
               double f2 = Couplings_Higgs_Triple[a][b][i];
               double f3 = Couplings_Higgs_Triple[b][c][j];
               double f4 = Couplings_Higgs_Triple[c][a][k];
@@ -1734,7 +2223,7 @@ std::vector<double> Class_Potential_Origin::WeinbergThirdDerivative() const
             }
             double f1 = Couplings_Higgs_Quartic[a][b][i][j];
             double f2 = Couplings_Higgs_Triple[b][a][k];
-            double f3 = fbase(MassSquaredHiggs[a], MassSquaredHiggs[b]) -
+            double f3 = fbase(std::abs(MassSquaredHiggs[a]), std::abs(MassSquaredHiggs[b])) -
                         C_CWcbHiggs + 0.5;
             Higgspart[i][j][k] += 3 * f1 * f2 * f3;
           }

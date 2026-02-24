@@ -59,7 +59,6 @@ public:
     return 0;
   };
 
-  void TripleHiggsCouplingsGeneral(std::vector<std::vector<double>> &ThermHiggsRotMatrix) override { return; }; //EU!!!
   void TripleHiggsCouplings() override { return; };
   std::vector<double> calc_CT() const override { return {0}; };
   void Debugging(const std::vector<double> &input,

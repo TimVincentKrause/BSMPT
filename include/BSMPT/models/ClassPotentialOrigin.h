@@ -797,6 +797,14 @@ public:
     Calculates all triple and quartic couplings in the physical basis
  */
   void CalculatePhysicalCouplings();
+
+  /**
+    Calculates all triple and quartic couplings in the physical basis at a specific vev configuration
+ */
+  void CalculatePhysicalCouplings(const std::vector<double> &vev);
+
+
+
   /**
    * Calculates the first derivative of the Coleman-Weinberg potential evaluated
    * at the tree-level minimum.
@@ -843,6 +851,9 @@ public:
    * potential to the triple Higgs couplings.
    */
   void Prepare_Triple();
+
+  // Prepare for general vev
+  void Prepare_Triple(const std::vector<double> &vev);
 
   /**
    * You can give the explicit Debye corrections to the Higgs mass matrix with
@@ -1000,16 +1011,6 @@ public:
    * Calculates the function f_{ab}^{(1)} (see https://arxiv.org/abs/1606.07069
    * eq 3.9) needed for the derivatives of the Coleman Weinberg potential.
    */
-
-  /** //EU!!!
-  * These functions do the same as their named ones but with a general input matrix 
-  *
-  *  
-  */
-  virtual void TripleHiggsCouplingsGeneral(std::vector<std::vector<double>> &ThermHiggsRotMatrix) = 0; //EU!!!
-
-
-
   double fbase(double MassSquaredA, double MassSquaredB) const;
   /**
    * Calculates the function f_{abc}^{(1)} (see https://arxiv.org/abs/1606.07069
@@ -1027,7 +1028,7 @@ public:
                    double MassSquaredC,
                    double MassSquaredD) const;
 
-  /**
+  /** 
    * Calculates the counterterm parameters. Here you need to work out the scheme
    * and implement the formulas. This has to be specified in the model file.
    */
