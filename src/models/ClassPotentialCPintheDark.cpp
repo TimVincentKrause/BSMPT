@@ -1380,19 +1380,105 @@ void Class_Potential_CPintheDark::TripleHiggsCouplings()
       }
     }
   }
+  /*
+    Christoph fix matrices?
+  */
+
+  const std::size_t pos_rho1 = 0, pos_eta1 = 1, pos_rho2 = 2, pos_eta2 = 3,
+                    pos_zeta1 = 4, pos_psi1 = 5, pos_zeta2 = 6, pos_psi2 = 7,
+                    pos_rhoS = 8;
+
+
+  MatrixXd HiggsRotFixed(NHiggs, NHiggs);
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    HiggsRotFixed.row(i) = HiggsRot.row(i);
+  }
+
+  if (HiggsRotFixed(posGp, pos_rho1) < 0) // Gp rho1 (= +1)
+  {
+    HiggsRotFixed.row(posGp) *= -1;
+  }
+  if (HiggsRotFixed(posGm, pos_eta1) < 0) // Gm eta1 (= +1)
+  {
+    HiggsRotFixed.row(posGm) *= -1;
+  }
+  if (HiggsRotFixed(posHp, pos_rho2) < 0) // Hp rho2 (= +1)
+  {
+    HiggsRotFixed.row(posHp) *= -1;
+  }
+  if (HiggsRotFixed(posHm, pos_eta2) < 0) // Hm eta2 (= +1)
+  {
+    HiggsRotFixed.row(posHm) *= -1;
+  }
+  if (HiggsRotFixed(posHSM, pos_zeta1) < 0) // HSM zeta1 (= +1)
+  {
+    HiggsRotFixed.row(posHSM) *= -1;
+  }
+  if (HiggsRotFixed(posG0, pos_psi1) < 0) // G0 psi1 (= +1)
+  {
+    HiggsRotFixed.row(posG0) *= -1;
+  }
+
+  // Check dark neutral submatrix
+  // Use the "ScannerS" criteria from arXiv:2007.02985 Eq. (6)
+  // (since ScannerS uses the same parametrisation of the angles as BSMPT):
+  // * (1) if R[1][1] < 0: h1 -> -h1 (i.e. multiply the h1 row with -1)
+  // * (2) if R[3][3] < 0: h3 -> -h3 (i.e. multiply the h3 row with -1)
+  // * (3) if det R < 0: h2 -> -h2 (i.e. multiply the h2 row with -1)
+
+  if (HiggsRotFixed(posh1, pos_zeta2) < 0)
+  // h1 zeta2 (condition (1) above, R11 < 0)
+  {
+    // if negative, flip sign of h1
+    HiggsRotFixed.row(posh1) *= -1;
+  }
+
+  if (HiggsRotFixed(posh3, pos_rhoS) < 0)
+  // h3 rhoS (condition (2) above, R33 < 0)
+  {
+    // if negative, flip sign of h3
+    HiggsRotFixed.row(posh3) *= -1;
+  }
+
+  // Calculate the determinant AFTER flipping the signs for rows 1 and 3 above
+  MatrixXd HiggsRotFixedNeutral(3, 3);
+  HiggsRotFixedNeutral(0, 0) = HiggsRotFixed(posh1, pos_zeta2);
+  HiggsRotFixedNeutral(0, 1) = HiggsRotFixed(posh1, pos_psi2);
+  HiggsRotFixedNeutral(0, 2) = HiggsRotFixed(posh1, pos_rhoS);
+
+  HiggsRotFixedNeutral(1, 0) = HiggsRotFixed(posh2, pos_zeta2);
+  HiggsRotFixedNeutral(1, 1) = HiggsRotFixed(posh2, pos_psi2);
+  HiggsRotFixedNeutral(1, 2) = HiggsRotFixed(posh2, pos_rhoS);
+
+  HiggsRotFixedNeutral(2, 0) = HiggsRotFixed(posh3, pos_zeta2);
+  HiggsRotFixedNeutral(2, 1) = HiggsRotFixed(posh3, pos_psi2);
+  HiggsRotFixedNeutral(2, 2) = HiggsRotFixed(posh3, pos_rhoS);
+
+  if (HiggsRotFixedNeutral.determinant() < 0)
+  // condition (3) above, det(R) < 0
+  {
+    // if negative, flip sign of h2
+    HiggsRotFixed.row(posh2) *= -1;
+  }
+
+  /*
+    Here is Christophs fix of the Rotation matrix stuff
+  */
+
 
   // new rotation matrix with
   MatrixXd HiggsRotSort(NHiggs, NHiggs);
 
-  HiggsRotSort.row(0) = HiggsRot.row(posGp);
-  HiggsRotSort.row(1) = HiggsRot.row(posGm);
-  HiggsRotSort.row(2) = HiggsRot.row(posHp);
-  HiggsRotSort.row(3) = HiggsRot.row(posHm);
-  HiggsRotSort.row(4) = HiggsRot.row(posHSM);
-  HiggsRotSort.row(5) = HiggsRot.row(posG0);
-  HiggsRotSort.row(6) = HiggsRot.row(posh1);
-  HiggsRotSort.row(7) = HiggsRot.row(posh2);
-  HiggsRotSort.row(8) = HiggsRot.row(posh3);
+  HiggsRotSort.row(0) = HiggsRotFixed.row(posGp);
+  HiggsRotSort.row(1) = HiggsRotFixed.row(posGm);
+  HiggsRotSort.row(2) = HiggsRotFixed.row(posHp);
+  HiggsRotSort.row(3) = HiggsRotFixed.row(posHm);
+  HiggsRotSort.row(4) = HiggsRotFixed.row(posHSM);
+  HiggsRotSort.row(5) = HiggsRotFixed.row(posG0);
+  HiggsRotSort.row(6) = HiggsRotFixed.row(posh1);
+  HiggsRotSort.row(7) = HiggsRotFixed.row(posh2);
+  HiggsRotSort.row(8) = HiggsRotFixed.row(posh3);
 
   std::vector<double> TripleDeriv;
   TripleDeriv = WeinbergThirdDerivative();

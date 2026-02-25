@@ -233,16 +233,11 @@ try
         outfile << std::endl;
       }
 
-      std::cout << "T_list" << std::endl;
       std::vector<double> T_list;
 
-      std::cout << "npoints=" << args.npoints << std::endl;
-      std::cout << "thigh=" << args.temphigh << std::endl;
-      std::cout << "tlow=" << args.templow << std::endl;
       for (int n = 0; n < args.npoints; n++)
         T_list.push_back(args.templow +
                          n * (args.temphigh - args.templow) / args.npoints);
-      std::cout << "do T_list" << std::endl;
 
       std::cout << "tcrit=" << vac.CoexPhasesList.at(0).crit_temp << std::endl;
       if (vac.PhasesList.size() == 2)
@@ -290,6 +285,11 @@ try
           vev = vac.PhasesList.at(0).Get(T).point;
         }
 
+        std::cout<<"T = "<<T<<std::endl;
+        std::cout<<"v ="<<vev<<std::endl;
+
+
+
         outfile << sep << vev;
 
         // change these
@@ -318,6 +318,7 @@ try
             }
           }
         }
+        break;
         auto time = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::high_resolution_clock::now() - start)
                         .count() /
