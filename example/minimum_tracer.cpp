@@ -74,19 +74,8 @@ std::vector<double> MinimumTracer::LocateMinimum(
 {
   // Save initial guess
   std::vector<double> guess = guess_In;
-
-  // CPintheDarkCoded
-  double errorHeavy = 1000 * error / 4;
-  double errorLight = error;
-
-  std::vector<double> grad = df(guess);
-
-  double gradHeavy = sqrt(pow(grad.at(0), 2) + pow(grad.at(2), 2) +
-                          pow(grad.at(3), 2) + pow(grad.at(4), 2));
-  double gradLight = abs(grad.at(1));
-
   // Checks if guess is close enough
-  if ((gradHeavy < errorHeavy) && (gradLight < errorLight)) return guess;
+  if (L2NormVector(df(guess)) < error) return guess;
 
   // If not, performs gradient descent until minima with a maximum of
   // "maxiter" iterations
@@ -96,14 +85,7 @@ std::vector<double> MinimumTracer::LocateMinimum(
   std::vector<double> gradient;                 // Gradient
   std::vector<std::vector<double>> Hess;        // HessianNumerical gradient
 
-  grad      = df(new_guess);
-  gradHeavy = sqrt(pow(grad.at(0), 2) + pow(grad.at(2), 2) +
-                   pow(grad.at(3), 2) + pow(grad.at(4), 2));
-  gradLight = abs(grad.at(1));
-
-  for (i = 0;
-       (i < maxiter) && (gradHeavy > errorHeavy) && (gradLight > errorLight);
-       i++)
+  for (i = 0; (i < maxiter) && (L2NormVector(df(new_guess)) > error); i++)
   {
     //  Update grad and HessianNumerical :
     gradient = df(new_guess);
@@ -147,10 +129,6 @@ std::vector<double> MinimumTracer::LocateMinimum(
         new_guess[j] -= const_multiplier * gradient[j]; // Updates guess
       }
     }
-    grad      = df(new_guess);
-    gradHeavy = sqrt(pow(grad.at(0), 2) + pow(grad.at(2), 2) +
-                     pow(grad.at(3), 2) + pow(grad.at(4), 2));
-    gradLight = abs(grad.at(1));
   }
   return (new_guess);
 }
@@ -250,8 +228,9 @@ MinimumTracer::FindZeroSmallestEigenvalue(std::vector<double> point_1,
     dV_m      = [=](auto const &arg) { return NablaNumerical(arg, V_m, eps); };
     Hessian_m = [=](auto const &arg)
     { return HessianNumerical(arg, V_m, eps); };
-    point_m = LocateMinimum(point_m, dV_m, Hessian_m, 1e-3 / (1 + T_m * T_m));
-    ev_m    = SmallestEigenvalue(point_m, Hessian_m);
+    point_m =
+        LocateMinimum(point_m, dV_m, Hessian_m, 1e-3 * dim / (1 + T_m * T_m));
+    ev_m = SmallestEigenvalue(point_m, Hessian_m);
 
     // Check if there is numerical instabilities so reduce the searching area.
     if (L2NormVector(point_m - point_2) / dim > AllowedMaxDistance or
@@ -350,7 +329,8 @@ MinimumTracer::TrackPhase(double &globMinEndT,
     Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, eps); };
 
     // Locate the minimum
-    new_point = LocateMinimum(point, dV, Hessian, 1e-4 * GradientThreshold);
+    new_point =
+        LocateMinimum(point, dV, Hessian, 1e-4 * GradientThreshold * dim);
 
     // Reduce the VEV into the same sector
     ReduceVEV(new_point);
@@ -358,20 +338,10 @@ MinimumTracer::TrackPhase(double &globMinEndT,
     // Remove flat directions
     ConvertToNonFlatDirections(new_point);
 
-    // for output
-    std::vector<double> grad = dV(new_point);
-
-    double LengthGradientHeavy = sqrt(pow(grad.at(0), 2) + pow(grad.at(2), 2) +
-                                      pow(grad.at(3), 2) + pow(grad.at(4), 2)) /
-                                 (dim - 1.);
-    double LengthGradientLight = abs(grad.at(1));
-
-    double GradientThresholdHeavy = 1000 * GradientThreshold;
-    double GradientThresholdLight = 10 * GradientThreshold;
-
     // Calculate the length of the gradient in the normal potential divided
     // by the dimension of the VEV space
-    LengthGradient = L2NormVector(grad) / dim; // (1 + currentT * currentT) *
+    LengthGradient =
+        L2NormVector(dV(new_point)) / dim; // (1 + currentT * currentT) *
     // Compare minimum and previous iteration
     Distance = L2NormVector(new_point - point);
     // Compute difference in energy between both minimum
@@ -383,8 +353,7 @@ MinimumTracer::TrackPhase(double &globMinEndT,
     {
       break;
     }
-    else if (LengthGradientHeavy > GradientThresholdHeavy or
-             LengthGradientLight > GradientThresholdLight or
+    else if (LengthGradient > GradientThreshold or
              Distance > ThresholdDistance or
              std::any_of(new_point.begin(),
                          new_point.end(),
@@ -397,11 +366,6 @@ MinimumTracer::TrackPhase(double &globMinEndT,
 
       ss << "\n\033[1;95m.-> | T = " << currentT
          << " |Grad|/dim =  " << LengthGradient << " | Distance = " << Distance
-         << " Grad =  (" << dV(new_point).at(0)
-         << ", " << dV(new_point).at(1)
-         << ", " << dV(new_point).at(2)
-         << ", " << dV(new_point).at(3)
-         << ", " << dV(new_point).at(4) << ")"
          << " | |dphi/dT| = " << abs(Distance / dT)
          << " | deltaV = " << PotentialDifference
          << " | SEV = " << SmallestEigenvalue(new_point, Hessian)
@@ -409,18 +373,10 @@ MinimumTracer::TrackPhase(double &globMinEndT,
 
       if (initialT == currentT)
       {
-        grad = dV(point);
         ss << "Could not locate the starting minimum at T = " << initialT
            << " GeV.";
         ss << " |Grad|/dim =  " << L2NormVector(dV(point)) / dim
-           << " | Grad =  (" << grad.at(0) << ", " << grad.at(1) << ", "
-           << grad.at(2) << ", " << grad.at(3) << ", " << grad.at(4) << ")"
            << " | Distance = " << Distance
-           << " Grad =  (" << dV(new_point).at(0)
-           << ", " << dV(new_point).at(1)
-           << ", " << dV(new_point).at(2)
-           << ", " << dV(new_point).at(3)
-           << ", " << dV(new_point).at(4) << ")"
            << " | |dphi/dT| = " << abs(Distance / dT)
            << " | deltaV = " << PotentialDifference
            << " | SEV = " << SmallestEigenvalue(point, Hessian);
@@ -624,7 +580,8 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
     Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, eps); };
 
     // Locate the minimum
-    new_point = LocateMinimum(point, dV, Hessian, 1e-4 * GradientThreshold);
+    new_point =
+        LocateMinimum(point, dV, Hessian, 1e-4 * GradientThreshold * dim);
 
     // Reduce the VEV into the same sector
     ReduceVEV(new_point);
@@ -632,19 +589,10 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
     // Remove flat directions
     ConvertToNonFlatDirections(new_point);
 
-    // for output
-    std::vector<double> grad   = dV(new_point);
-    double LengthGradientHeavy = sqrt(pow(grad.at(0), 2) + pow(grad.at(2), 2) +
-                                      pow(grad.at(3), 2) + pow(grad.at(4), 2)) /
-                                 (dim - 1.);
-    double LengthGradientLight = abs(grad.at(1));
-
-    double GradientThresholdHeavy = 1000 * GradientThreshold;
-    double GradientThresholdLight = 10 * GradientThreshold;
-
     // Calculate the length of the gradient in the normal potential divided
     // by the dimension of the VEV space
-    LengthGradient = L2NormVector(grad) / dim; // (1 + currentT * currentT) *
+    LengthGradient =
+        L2NormVector(dV(new_point)) / dim; // (1 + currentT * currentT) *
     // Compare minimum and previous iteration
     Distance = L2NormVector(new_point - point);
     // Compute difference in energy between both minimum
@@ -656,8 +604,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
     {
       break;
     }
-    else if (LengthGradientHeavy > GradientThresholdHeavy or
-             LengthGradientLight > GradientThresholdLight or
+    else if (LengthGradient > GradientThreshold or
              Distance > ThresholdDistance or
              std::any_of(new_point.begin(),
                          new_point.end(),
@@ -670,11 +617,6 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
 
       ss << "\n\033[1;95m.-> | T = " << currentT
          << " |Grad|/dim =  " << LengthGradient << " | Distance = " << Distance
-         << " Grad =  (" << dV(new_point).at(0)
-         << ", " << dV(new_point).at(1)
-         << ", " << dV(new_point).at(2)
-         << ", " << dV(new_point).at(3)
-         << ", " << dV(new_point).at(4) << ")"
          << " | |dphi/dT| = " << abs(Distance / dT)
          << " | deltaV = " << PotentialDifference
          << " | SEV = " << SmallestEigenvalue(new_point, Hessian)
@@ -682,15 +624,9 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
 
       if (initialT == currentT)
       {
-        grad = dV(point);
         ss << "Could not locate the starting minimum at T = " << initialT
            << " GeV.";
         ss << " |Grad|/dim =  " << L2NormVector(dV(point)) / dim
-           << " Grad =  (" << dV(new_point).at(0)
-           << ", " << dV(new_point).at(1)
-           << ", " << dV(new_point).at(2)
-           << ", " << dV(new_point).at(3)
-           << ", " << dV(new_point).at(4) << ")"
            << " | Distance = " << Distance
            << " | |dphi/dT| = " << abs(Distance / dT)
            << " | deltaV = " << PotentialDifference
@@ -2579,7 +2515,6 @@ void Vacuum::orderPhases()
 
 void Vacuum::MultiStepPTTracer(const double &Temp, const double &deltaT)
 {
-  if (PhasesList.size() > 1) return;
   if (Temp <= T_low)
   {
     auto glob_min = MinTracer->GetGlobalMinimum(T_low);
@@ -2785,6 +2720,7 @@ void Vacuum::setCoexRegion(const MultiStepPTMode &MultiStepPTMode)
     }
     else if (numPhases <= 0) // found a non-traced gap in temperature
     {
+      /*
       no_gap_found       = false;
       double T_low_hole  = edgesListResult[i + 1].temp;
       double T_high_hole = edgesListResult[i].temp;
@@ -2825,8 +2761,9 @@ void Vacuum::setCoexRegion(const MultiStepPTMode &MultiStepPTMode)
       }
       else
       {
-        status_vacuum = StatusTracing::NoCoverage;
-      }
+      */
+      status_vacuum = StatusTracing::NoCoverage;
+      /*}*/
     }
   }
 

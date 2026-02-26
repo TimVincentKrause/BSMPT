@@ -25,6 +25,63 @@ NablaNumerical(const std::vector<double> &phi,
   return result;
 }
 
+std::vector<double>
+NablaNumericalo6(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps)
+{
+  std::vector<double> result(phi.size());
+
+  for (size_t i = 0; i < phi.size(); i++)
+  {
+    std::vector<double> lp3 = phi;
+    lp3[i] += 4 * eps;
+    std::vector<double> lp2 = phi;
+    lp2[i] += 2 * eps;
+    std::vector<double> lp1 = phi;
+    lp1[i] += eps;
+    std::vector<double> lm1 = phi;
+    lm1[i] -= eps;
+    std::vector<double> lm2 = phi;
+    lm2[i] -= 2 * eps;
+    std::vector<double> lm3 = phi;
+    lm3[i] += 4 * eps;
+    result[i] = (f(lp3) - 9*f(lp2) + 45*f(lp1) - 45*f(lm1) + 9*f(lm2) - f(lm3)) / (60 * eps);
+  }
+  return result;
+}
+
+std::vector<double>
+NablaNumericalo8(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps)
+{
+  std::vector<double> result(phi.size());
+
+  for (size_t i = 0; i < phi.size(); i++)
+  {
+    std::vector<double> lp4 = phi;
+    lp4[i] += 6 * eps;
+    std::vector<double> lp3 = phi;
+    lp3[i] += 4 * eps;
+    std::vector<double> lp2 = phi;
+    lp2[i] += 2 * eps;
+    std::vector<double> lp1 = phi;
+    lp1[i] += eps;
+    std::vector<double> lm1 = phi;
+    lm1[i] -= eps;
+    std::vector<double> lm2 = phi;
+    lm2[i] -= 2 * eps;
+    std::vector<double> lm3 = phi;
+    lm3[i] += 4 * eps;
+    std::vector<double> lm4 = phi;
+    lm4[i] += 6 * eps;
+    result[i] = (-3*f(lp4) + 32*f(lp3) - 168*f(lp2) + 672*f(lp1) - 672*f(lm1) + 168*f(lm2) - 32*f(lm3) + 3*f(lm4)) / (840 * eps);
+  }
+  return result;
+}
+
+
 std::vector<std::vector<double>>
 HessianNumerical(const std::vector<double> &phi,
                  const std::function<double(std::vector<double>)> &V,
