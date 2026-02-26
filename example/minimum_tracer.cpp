@@ -2720,6 +2720,7 @@ void Vacuum::setCoexRegion(const MultiStepPTMode &MultiStepPTMode)
     }
     else if (numPhases <= 0) // found a non-traced gap in temperature
     {
+      /*
       no_gap_found       = false;
       double T_low_hole  = edgesListResult[i + 1].temp;
       double T_high_hole = edgesListResult[i].temp;
@@ -2760,8 +2761,9 @@ void Vacuum::setCoexRegion(const MultiStepPTMode &MultiStepPTMode)
       }
       else
       {
-        status_vacuum = StatusTracing::NoCoverage;
-      }
+      */
+      status_vacuum = StatusTracing::NoCoverage;
+      /*}*/
     }
   }
 
