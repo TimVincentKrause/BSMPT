@@ -367,7 +367,7 @@ MinimumTracer::TrackPhase(double &globMinEndT,
     double LengthGradientLight = abs(grad.at(1));
 
     double GradientThresholdHeavy = 1000 * GradientThreshold;
-    double GradientThresholdLight = GradientThreshold;
+    double GradientThresholdLight = 10 * GradientThreshold;
 
     // Calculate the length of the gradient in the normal potential divided
     // by the dimension of the VEV space
@@ -632,7 +632,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
     double LengthGradientLight = abs(grad.at(1));
 
     double GradientThresholdHeavy = 1000 * GradientThreshold;
-    double GradientThresholdLight = GradientThreshold;
+    double GradientThresholdLight = 10 * GradientThreshold;
 
     // Calculate the length of the gradient in the normal potential divided
     // by the dimension of the VEV space
