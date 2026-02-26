@@ -2565,6 +2565,7 @@ void Vacuum::orderPhases()
 
 void Vacuum::MultiStepPTTracer(const double &Temp, const double &deltaT)
 {
+  if (PhasesList.size() > 1) return;
   if (Temp <= T_low)
   {
     auto glob_min = MinTracer->GetGlobalMinimum(T_low);
