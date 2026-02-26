@@ -379,8 +379,8 @@ MinimumTracer::TrackPhase(double &globMinEndT,
     {
       break;
     }
-    else if ((LengthGradientHeavy > GradientThresholdHeavy && 
-              LengthGradientLight > GradientThresholdLight) or
+    else if (LengthGradientHeavy > GradientThresholdHeavy or
+             LengthGradientLight > GradientThresholdLight or
              Distance > ThresholdDistance or
              std::any_of(new_point.begin(),
                          new_point.end(),
@@ -650,8 +650,8 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
     {
       break;
     }
-    else if ((LengthGradientHeavy > GradientThresholdHeavy && 
-              LengthGradientLight > GradientThresholdLight) or
+    else if (LengthGradientHeavy > GradientThresholdHeavy or
+             LengthGradientLight > GradientThresholdLight or
              Distance > ThresholdDistance or
              std::any_of(new_point.begin(),
                          new_point.end(),
