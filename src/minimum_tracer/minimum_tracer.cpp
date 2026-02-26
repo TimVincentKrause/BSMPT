@@ -397,8 +397,11 @@ MinimumTracer::TrackPhase(double &globMinEndT,
 
       ss << "\n\033[1;95m.-> | T = " << currentT
          << " |Grad|/dim =  " << LengthGradient << " | Distance = " << Distance
-         << " | Grad =  (" << grad.at(0) << ", " << grad.at(1) << ", "
-         << grad.at(2) << ", " << grad.at(3) << ", " << grad.at(4) << ")"
+         << " Grad =  (" << dV(new_point).at(0)
+         << ", " << dV(new_point).at(1)
+         << ", " << dV(new_point).at(2)
+         << ", " << dV(new_point).at(3)
+         << ", " << dV(new_point).at(4) << ")"
          << " | |dphi/dT| = " << abs(Distance / dT)
          << " | deltaV = " << PotentialDifference
          << " | SEV = " << SmallestEigenvalue(new_point, Hessian)
@@ -413,6 +416,11 @@ MinimumTracer::TrackPhase(double &globMinEndT,
            << " | Grad =  (" << grad.at(0) << ", " << grad.at(1) << ", "
            << grad.at(2) << ", " << grad.at(3) << ", " << grad.at(4) << ")"
            << " | Distance = " << Distance
+           << " Grad =  (" << dV(new_point).at(0)
+           << ", " << dV(new_point).at(1)
+           << ", " << dV(new_point).at(2)
+           << ", " << dV(new_point).at(3)
+           << ", " << dV(new_point).at(4) << ")"
            << " | |dphi/dT| = " << abs(Distance / dT)
            << " | deltaV = " << PotentialDifference
            << " | SEV = " << SmallestEigenvalue(point, Hessian);
@@ -662,8 +670,11 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
 
       ss << "\n\033[1;95m.-> | T = " << currentT
          << " |Grad|/dim =  " << LengthGradient << " | Distance = " << Distance
-         << " | Grad =  (" << grad.at(0) << ", " << grad.at(1) << ", "
-         << grad.at(2) << ", " << grad.at(3) << ", " << grad.at(4) << ")"
+         << " Grad =  (" << dV(new_point).at(0)
+         << ", " << dV(new_point).at(1)
+         << ", " << dV(new_point).at(2)
+         << ", " << dV(new_point).at(3)
+         << ", " << dV(new_point).at(4) << ")"
          << " | |dphi/dT| = " << abs(Distance / dT)
          << " | deltaV = " << PotentialDifference
          << " | SEV = " << SmallestEigenvalue(new_point, Hessian)
@@ -675,9 +686,12 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
         ss << "Could not locate the starting minimum at T = " << initialT
            << " GeV.";
         ss << " |Grad|/dim =  " << L2NormVector(dV(point)) / dim
-           << " | Distance = " << Distance << " | Grad =  (" << grad.at(0)
-           << ", " << grad.at(1) << ", " << grad.at(2) << ", " << grad.at(3)
-           << ", " << grad.at(4) << ")"
+           << " Grad =  (" << dV(new_point).at(0)
+           << ", " << dV(new_point).at(1)
+           << ", " << dV(new_point).at(2)
+           << ", " << dV(new_point).at(3)
+           << ", " << dV(new_point).at(4) << ")"
+           << " | Distance = " << Distance
            << " | |dphi/dT| = " << abs(Distance / dT)
            << " | deltaV = " << PotentialDifference
            << " | SEV = " << SmallestEigenvalue(point, Hessian);

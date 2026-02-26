@@ -59,6 +59,14 @@ if(BSMPTBuildExecutables)
   target_link_libraries(CalcCT Models Utility)
   target_compile_features(CalcCT PUBLIC cxx_std_17)
 
+  add_executable(ThermalMasses prog/ThermalMasses.cpp)
+  target_link_libraries(ThermalMasses Utility GW MinimumTracer TransitionTracer)
+  target_compile_features(ThermalMasses PUBLIC cxx_std_17)
+
+  add_executable(ThermalTripleHiggsNLO prog/ThermalTripleHiggsNLO.cpp)
+  target_link_libraries(ThermalTripleHiggsNLO Utility GW MinimumTracer TransitionTracer)
+  target_compile_features(ThermalTripleHiggsNLO PUBLIC cxx_std_17)
+
   add_executable(TripleHiggsCouplingsNLO prog/TripleHiggsNLO.cpp)
   target_link_libraries(TripleHiggsCouplingsNLO Models Utility)
   target_compile_features(TripleHiggsCouplingsNLO PUBLIC cxx_std_17)

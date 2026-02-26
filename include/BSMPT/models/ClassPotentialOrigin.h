@@ -797,6 +797,14 @@ public:
     Calculates all triple and quartic couplings in the physical basis
  */
   void CalculatePhysicalCouplings();
+
+  /**
+    Calculates all triple and quartic couplings in the physical basis at a specific vev configuration
+ */
+  void CalculatePhysicalCouplings(const std::vector<double> &vev);
+
+
+
   /**
    * Calculates the first derivative of the Coleman-Weinberg potential evaluated
    * at the tree-level minimum.
@@ -843,6 +851,9 @@ public:
    * potential to the triple Higgs couplings.
    */
   void Prepare_Triple();
+
+  // Prepare for general vev
+  void Prepare_Triple(const std::vector<double> &vev);
 
   /**
    * You can give the explicit Debye corrections to the Higgs mass matrix with
@@ -1017,7 +1028,7 @@ public:
                    double MassSquaredC,
                    double MassSquaredD) const;
 
-  /**
+  /** 
    * Calculates the counterterm parameters. Here you need to work out the scheme
    * and implement the formulas. This has to be specified in the model file.
    */
