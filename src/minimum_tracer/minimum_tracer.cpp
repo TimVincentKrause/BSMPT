@@ -344,7 +344,7 @@ MinimumTracer::TrackPhase(double &globMinEndT,
       // Potential wrapper
       std::vector<double> res = this->modelPointer->MinimizeOrderVEV(vev);
       return this->modelPointer->VEff(res, currentT) /
-             (1 + currentT * currentT);
+             (100. + currentT * currentT);
     };
     dV      = [=](auto const &arg) { return NablaNumerical(arg, V, eps); };
     Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, eps); };
@@ -610,7 +610,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
       // Potential wrapper
       std::vector<double> res = this->modelPointer->MinimizeOrderVEV(vev);
       return this->modelPointer->VEff(res, currentT) /
-             (1 + currentT * currentT);
+             (100. + currentT * currentT);
     };
     dV      = [=](auto const &arg) { return NablaNumerical(arg, V, eps); };
     Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, eps); };
