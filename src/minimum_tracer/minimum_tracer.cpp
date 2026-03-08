@@ -616,7 +616,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
     Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, eps); };
 
     // Locate the minimum
-    new_point = LocateMinimum(point, dV, Hessian, 1e-4 * GradientThreshold);
+    new_point = LocateMinimum(point, dV, Hessian, 1e-5 * GradientThreshold);
 
     // Reduce the VEV into the same sector
     ReduceVEV(new_point);
