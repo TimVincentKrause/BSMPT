@@ -60,6 +60,7 @@ public:
   };
   void AdjustRotationMatrix() override { return; };
   void TripleHiggsCouplings() override { return; };
+  void TripleHiggsCouplings(const std::vector<double> &v, const double T) override { return; };
   std::vector<double> calc_CT() const override { return {0}; };
   void Debugging(const std::vector<double> &input,
                  std::vector<double> &output) const override

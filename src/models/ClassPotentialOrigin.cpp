@@ -75,6 +75,25 @@ void Class_Potential_Origin::Prepare_Triple()
   }
 }
 
+void Class_Potential_Origin::Prepare_Triple(const std::vector<double> &v)
+{
+  for (std::size_t a = 0; a < NHiggs; a++)
+  {
+    for (std::size_t b = 0; b < NHiggs; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        LambdaHiggs_3_CT[a][b][i] = Curvature_Higgs_CT_L3[a][b][i];
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          LambdaHiggs_3_CT[a][b][i] +=
+              Curvature_Higgs_CT_L4[a][b][i][j] * v[j];
+        }
+      }
+    }
+  }
+}
+
 double Class_Potential_Origin::FCW(double MassSquared) const
 {
   double res = 0;
@@ -995,6 +1014,522 @@ bool Class_Potential_Origin::CheckRotationMatrix()
   return true;
 }
 
+
+
+
+std::vector<double>
+Class_Potential_Origin::DerivativeOfEigenvalues3(
+    const Ref<MatrixXd> inM,
+    const Ref<MatrixXd> inMDiffX,
+    const Ref<MatrixXd> inMDiffY,
+    const Ref<MatrixXd> inMDiffZ,
+    const Ref<MatrixXd> inMDiffXY,
+    const Ref<MatrixXd> inMDiffXZ,
+    const Ref<MatrixXd> inMDiffYZ,
+    const Ref<MatrixXd> inMDiffXYZ,
+    const std::size_t diffz,
+    const std::vector<size_t> reducelist) const
+  {
+
+  std::vector<double> res;
+  const std::size_t nRows = inM.rows();
+  const std::size_t nCols = inM.cols();
+
+  if (nCols != nRows)
+  {
+    throw std::runtime_error("ERROR ! M needs to be an quadratic Matrix for "
+                             "calculating the derivatives !\n");
+  }
+
+  const std::size_t originalnSize = nRows;
+  std::size_t nSize;
+
+  std::vector<double> OriginalEigenvalues(originalnSize);
+
+  double EVThres = std::pow(10, -7);
+  // First see if reducelist is empty
+    Eigen::MatrixXd M;
+    Eigen::MatrixXd MDiffX;
+    Eigen::MatrixXd MDiffY;
+    Eigen::MatrixXd MDiffZ;
+    Eigen::MatrixXd MDiffXY;
+    Eigen::MatrixXd MDiffXZ;
+    Eigen::MatrixXd MDiffYZ;
+    Eigen::MatrixXd MDiffXYZ;
+  if (reducelist.empty())
+  {
+    M = inM;
+    MDiffX = inMDiffX;
+    MDiffY = inMDiffY;
+    MDiffZ = inMDiffZ;
+    MDiffXY = inMDiffXY;
+    MDiffXZ = inMDiffXZ;
+    MDiffYZ = inMDiffYZ;
+    MDiffXYZ = inMDiffXYZ;
+    nSize = originalnSize;
+  }
+  else if (reducelist.size() <= originalnSize)
+  {
+    M = ReduceMatrix(inM,reducelist);
+    MDiffX = ReduceMatrix(inMDiffX,reducelist);
+    MDiffY = ReduceMatrix(inMDiffY,reducelist);
+    MDiffZ = ReduceMatrix(inMDiffZ,reducelist);
+    MDiffXY = ReduceMatrix(inMDiffXY,reducelist);
+    MDiffXZ = ReduceMatrix(inMDiffXZ,reducelist);
+    MDiffYZ = ReduceMatrix(inMDiffYZ,reducelist);
+    MDiffXYZ = ReduceMatrix(inMDiffXYZ,reducelist);
+    nSize = M.rows();
+
+
+    // need to compute eigenvalues for inflation later
+    SelfAdjointEigenSolver<MatrixXd> es0;
+    es0.compute(inM);
+    for (std::size_t i = 0; i < originalnSize; i++)
+    {
+      OriginalEigenvalues[i] = es0.eigenvalues()[i];
+    }
+  }
+  else
+  {
+    throw std::runtime_error("ERROR ! You called with an invalid "
+                             "reducelist configuration !\n");
+  }
+
+  SelfAdjointEigenSolver<MatrixXd> es;
+  es.compute(M);
+
+  std::vector<double> Eigenvalues(nSize);
+  for (std::size_t i = 0; i < nSize; i++)
+  {
+    Eigenvalues[i] = es.eigenvalues()[i]; // bc limit is different for different stuff
+  }
+
+  for (std::size_t i = 0; i < nSize - 1; i++)
+  {
+    if (std::abs(Eigenvalues[i] - Eigenvalues[i + 1]) < EVThres)
+    {
+      std::cout << "ERROR ! repeated eigenvalues." << std::endl;
+      std::cout << "E1 = " << Eigenvalues[i] << "; E2 = " << Eigenvalues[i + 1] << "; at i =" << i << std::endl;
+      Logger::Write(LoggingLevel::Default, "ERROR ! repeated eigenvalues.");
+    }
+  }
+
+  Eigen::ArrayXd ZeroArray = Eigen::ArrayXd::Zero(nSize);
+
+  std::vector<double> derivX_eigenvalues(nSize);
+  std::vector<double> derivY_eigenvalues(nSize);
+  std::vector<double> derivZ_eigenvalues(nSize);
+  //std::vector<Eigen::VectorXd> derivX_eigenvectors(nSize, Eigen::VectorXd(nSize)); -> not needed
+  std::vector<Eigen::VectorXd> derivY_eigenvectors(nSize, Eigen::VectorXd(nSize));
+  std::vector<Eigen::VectorXd> derivZ_eigenvectors(nSize, Eigen::VectorXd(nSize));
+
+  for (std::size_t j = 0; j < nSize; j++)
+  {
+    //derivX_eigenvectors.at(j) = ZeroArray;
+    derivY_eigenvectors.at(j) = ZeroArray;
+    derivZ_eigenvectors.at(j) = ZeroArray;
+    // derivative of eigenvalue
+    Eigen::VectorXd evj = es.eigenvectors().col(j);
+    derivX_eigenvalues[j] = evj.transpose() * MDiffX * evj;
+    derivY_eigenvalues[j] = evj.transpose() * MDiffY * evj;
+    derivZ_eigenvalues[j] = evj.transpose() * MDiffZ * evj;
+
+    // derivative of eigenvector
+    for (std::size_t k = 0; k < nSize; k++)
+    {
+      if (k == j)
+        continue;
+      Eigen::VectorXd evk = es.eigenvectors().col(k);
+
+      //double tmpX = (evk.transpose() * MDiffX * evj);
+      double tmpY = (evk.transpose() * MDiffY * evj);
+      double tmpZ = (evk.transpose() * MDiffZ * evj);
+
+      //derivX_eigenvectors[j] += tmpX/(Eigenvalues[j]-Eigenvalues[k]) * evk;
+      derivY_eigenvectors[j] += tmpY/(Eigenvalues[j]-Eigenvalues[k]) * evk;
+      derivZ_eigenvectors[j] += tmpZ/(Eigenvalues[j]-Eigenvalues[k]) * evk;
+    }
+  }
+
+  std::vector<double> derivXY_eigenvalues(nSize);
+  std::vector<Eigen::VectorXd> derivYZ_eigenvectors(nSize, Eigen::VectorXd(nSize));
+
+  // std::size_t x0 = diffx - 1;
+  // std::size_t y0 = diffy - 1;
+  std::size_t z0 = diffz - 1;
+
+  for (std::size_t j = 0; j < nSize; j++)
+  {
+    Eigen::VectorXd evj = es.eigenvectors().col(j);
+    derivXY_eigenvalues[j] = derivY_eigenvectors[j].transpose() * MDiffX * evj;
+    derivXY_eigenvalues[j] += evj.transpose() * MDiffXY * evj;
+    derivXY_eigenvalues[j] += evj.transpose() * MDiffX * derivY_eigenvectors[j];
+
+
+    // 2nd derivative of eigenvector
+    for (std::size_t k = 0; k < nSize; k++)
+    {
+      if (k == j)
+        continue;
+      Eigen::VectorXd evk = es.eigenvectors().col(k);
+
+      double tmpYZ1 = (evk.transpose() * MDiffY * evj);
+      derivYZ_eigenvectors[j] += tmpYZ1*(derivZ_eigenvalues[z0] - derivZ_eigenvalues[z0])/
+                                 (pow(Eigenvalues[j]-Eigenvalues[k],2)) * evk;
+
+      double tmpYZ2 = (derivZ_eigenvectors[k].transpose() * MDiffY * evj);
+      tmpYZ2 += (evk.transpose() * MDiffYZ * evj);
+      tmpYZ2 += (evk.transpose() * MDiffY * derivZ_eigenvectors[j]);
+
+
+
+      derivYZ_eigenvectors[j] += tmpYZ2/(pow(Eigenvalues[j]-Eigenvalues[k],2)) * evk;
+
+      double tmpYZ3 = (evk.transpose() * MDiffY * evj);
+      derivYZ_eigenvectors[j] += tmpYZ3/(pow(Eigenvalues[j]-Eigenvalues[k],2)) * derivZ_eigenvectors[k];
+    }
+  }
+
+
+  std::vector<double> derivXYZ_eigenvalues(nSize);
+  for (std::size_t j = 0; j < nSize; j++)
+  {
+    Eigen::VectorXd evj = es.eigenvectors().col(j);
+    derivXYZ_eigenvalues[j] = derivYZ_eigenvectors[j].transpose() * MDiffX * evj;
+    derivXYZ_eigenvalues[j] += derivY_eigenvectors[j].transpose() * MDiffXZ * evj;
+    derivXYZ_eigenvalues[j] += derivY_eigenvectors[j].transpose() * MDiffX * derivZ_eigenvectors[j];
+
+    derivXYZ_eigenvalues[j] += derivZ_eigenvectors[j].transpose() * MDiffXY * evj;
+    derivXYZ_eigenvalues[j] += evj.transpose() * MDiffXYZ * evj;
+    derivXYZ_eigenvalues[j] += evj.transpose() * MDiffXY * derivZ_eigenvectors[j];
+
+    derivXYZ_eigenvalues[j] += derivZ_eigenvectors[j].transpose() * MDiffX * derivY_eigenvectors[j];
+    derivXYZ_eigenvalues[j] += evj.transpose() * MDiffXZ * derivY_eigenvectors[j];
+    derivXYZ_eigenvalues[j] += evj.transpose() * MDiffX * derivYZ_eigenvectors[j];
+
+  }
+
+
+  if (reducelist.empty())
+  {
+    for (std::size_t i = 0; i < nSize; i++)
+    {
+      res.push_back(Eigenvalues[i]);
+    }
+    for (std::size_t i = 0; i < nSize; i++)
+    {
+      res.push_back(derivX_eigenvalues[i]);
+    }
+    for (std::size_t i = 0; i < nSize; i++)
+    {
+      res.push_back(derivXY_eigenvalues[i]);
+    }
+    for (std::size_t i = 0; i < nSize; i++)
+    {
+      if ((derivXYZ_eigenvalues[i] < 1e-2) and (not std::isnan(derivXYZ_eigenvalues[i])))
+      {
+        res.push_back(0);
+      }
+      else
+      {
+      res.push_back(derivXYZ_eigenvalues[i]);
+      }
+    }
+  }
+  else if (reducelist.size() <= originalnSize)
+  {
+    std::vector<std::size_t> inflatelist(originalnSize);
+    for (std::size_t i = 0; i < originalnSize; i++)
+    {
+      for (std::size_t j = 0; j < nSize; j++)
+      {
+        if (abs(OriginalEigenvalues.at(i) - Eigenvalues.at(j)) < EVThres)
+          {inflatelist.at(i) = j;break;}
+
+      }
+    }
+    for (std::size_t i = 0; i < originalnSize; i++)
+    {
+      res.push_back(Eigenvalues[inflatelist.at(i)]);
+    }
+    for (std::size_t i = 0; i < originalnSize; i++)
+    {
+      res.push_back(derivX_eigenvalues[inflatelist.at(i)]);
+    }
+    for (std::size_t i = 0; i < originalnSize; i++)
+    {
+      res.push_back(derivXY_eigenvalues[inflatelist.at(i)]);
+    }
+    for (std::size_t i = 0; i < originalnSize; i++)
+    {
+      if ((derivXYZ_eigenvalues[inflatelist.at(i)] < EVThres) and (not std::isnan(derivXYZ_eigenvalues[inflatelist.at(i)])))
+      {
+        res.push_back(0);
+      }
+      else
+      {
+      res.push_back(derivXYZ_eigenvalues[inflatelist.at(i)]);
+      }
+    }
+  }
+
+
+
+  return res;
+}
+
+
+
+
+std::vector<double>
+Class_Potential_Origin::DerivativeOfEigenvalues2(
+    const Ref<MatrixXd> inM,
+    const Ref<MatrixXd> inMDiffX,
+    const Ref<MatrixXd> inMDiffY,
+    const Ref<MatrixXd> inMDiffXY,
+    const std::vector<size_t> reducelist) const
+  {
+
+  std::vector<double> res;
+  const std::size_t nRows = inM.rows();
+  const std::size_t nCols = inM.cols();
+
+  if (nCols != nRows)
+  {
+    throw std::runtime_error("ERROR ! M needs to be an quadratic Matrix for "
+                             "calculating the derivatives !\n");
+  }
+
+  const std::size_t originalnSize = nRows;
+  std::size_t nSize;
+
+  std::vector<double> OriginalEigenvalues(originalnSize);
+
+  double EVThres = std::pow(10, -7);
+  // First see if reducelist is empty
+    Eigen::MatrixXd M;
+    Eigen::MatrixXd MDiffX;
+    Eigen::MatrixXd MDiffY;
+    Eigen::MatrixXd MDiffXY;
+  if (reducelist.empty())
+  {
+    M = inM;
+    MDiffX = inMDiffX;
+    MDiffY = inMDiffY;
+    MDiffXY = inMDiffXY;
+    nSize = originalnSize;
+  }
+  else if (reducelist.size() <= originalnSize)
+  {
+    M = ReduceMatrix(inM,reducelist);
+    MDiffX = ReduceMatrix(inMDiffX,reducelist);
+    MDiffY = ReduceMatrix(inMDiffY,reducelist);
+    MDiffXY = ReduceMatrix(inMDiffXY,reducelist);
+    nSize = M.rows();
+
+
+    // need to compute eigenvalues for inflation later
+    SelfAdjointEigenSolver<MatrixXd> es0;
+    es0.compute(inM);
+    for (std::size_t i = 0; i < originalnSize; i++)
+    {
+      OriginalEigenvalues[i] = es0.eigenvalues()[i];
+    }
+  }
+  else
+  {
+    throw std::runtime_error("ERROR ! You called with an invalid "
+                             "reducelist configuration !\n");
+  }
+
+  SelfAdjointEigenSolver<MatrixXd> es;
+  es.compute(M);
+
+  std::vector<double> Eigenvalues(nSize);
+  for (std::size_t i = 0; i < nSize; i++)
+  {
+    Eigenvalues[i] = es.eigenvalues()[i]; // bc limit is different for different stuff
+  }
+
+  for (std::size_t i = 0; i < nSize - 1; i++)
+  {
+    if (std::abs(Eigenvalues[i] - Eigenvalues[i + 1]) < EVThres)
+    {
+      std::cout << "ERROR ! repeated eigenvalues." << std::endl;
+      std::cout << "E1 = " << Eigenvalues[i] << "; E2 = " << Eigenvalues[i + 1] << "; at i =" << i << std::endl;
+      Logger::Write(LoggingLevel::Default, "ERROR ! repeated eigenvalues.");
+    }
+  }
+
+  Eigen::ArrayXd ZeroArray = Eigen::ArrayXd::Zero(nSize);
+
+  std::vector<double> derivX_eigenvalues(nSize);
+  std::vector<double> derivY_eigenvalues(nSize);
+  //std::vector<Eigen::VectorXd> derivX_eigenvectors(nSize, Eigen::VectorXd(nSize)); -> not needed
+  std::vector<Eigen::VectorXd> derivY_eigenvectors(nSize, Eigen::VectorXd(nSize));
+
+  for (std::size_t j = 0; j < nSize; j++)
+  {
+    //derivX_eigenvectors.at(j) = ZeroArray;
+    derivY_eigenvectors.at(j) = ZeroArray;
+    // derivative of eigenvalue
+    Eigen::VectorXd evj = es.eigenvectors().col(j);
+    derivX_eigenvalues[j] = evj.transpose() * MDiffX * evj;
+    derivY_eigenvalues[j] = evj.transpose() * MDiffY * evj;
+
+    // derivative of eigenvector
+    for (std::size_t k = 0; k < nSize; k++)
+    {
+      if (k == j)
+        continue;
+      Eigen::VectorXd evk = es.eigenvectors().col(k);
+
+      //double tmpX = (evk.transpose() * MDiffX * evj);
+      double tmpY = (evk.transpose() * MDiffY * evj);
+
+      //derivX_eigenvectors[j] += tmpX/(Eigenvalues[j]-Eigenvalues[k]) * evk;
+      derivY_eigenvectors[j] += tmpY/(Eigenvalues[j]-Eigenvalues[k]) * evk;
+    }
+  }
+
+  std::vector<double> derivXY_eigenvalues(nSize);
+
+  for (std::size_t j = 0; j < nSize; j++)
+  {
+    Eigen::VectorXd evj = es.eigenvectors().col(j);
+    derivXY_eigenvalues[j] = derivY_eigenvectors[j].transpose() * MDiffX * evj;
+    derivXY_eigenvalues[j] += evj.transpose() * MDiffXY * evj;
+    derivXY_eigenvalues[j] += evj.transpose() * MDiffX * derivY_eigenvectors[j];
+  }
+
+
+  if (reducelist.empty())
+  {
+    for (std::size_t i = 0; i < nSize; i++)
+    {
+      res.push_back(Eigenvalues[i]);
+    }
+    // for (std::size_t i = 0; i < nSize; i++)
+    // {
+    //   res.push_back(derivX_eigenvalues[i]);
+    // }
+    for (std::size_t i = 0; i < nSize; i++)
+    {
+      res.push_back(derivXY_eigenvalues[i]);
+    }
+  }
+  else if (reducelist.size() <= originalnSize)
+  {
+    std::vector<std::size_t> inflatelist(originalnSize);
+    for (std::size_t i = 0; i < originalnSize; i++)
+    {
+      for (std::size_t j = 0; j < nSize; j++)
+      {
+        if (abs(OriginalEigenvalues.at(i) - Eigenvalues.at(j)) < EVThres)
+          {inflatelist.at(i) = j;break;}
+
+      }
+    }
+    for (std::size_t i = 0; i < originalnSize; i++)
+    {
+      res.push_back(Eigenvalues[inflatelist.at(i)]);
+    }
+    // for (std::size_t i = 0; i < originalnSize; i++)
+    // {
+    //   res.push_back(derivX_eigenvalues[inflatelist.at(i)]);
+    // }
+    for (std::size_t i = 0; i < originalnSize; i++)
+    {
+      res.push_back(derivXY_eigenvalues[inflatelist.at(i)]);
+    }
+  }
+  return res;
+}
+
+
+
+std::vector<double>
+Class_Potential_Origin::DerivativeOfEigenvalues1(
+    const Ref<MatrixXd> M,
+    const Ref<MatrixXd> MDiffX) const
+  {
+
+  std::vector<double> res;
+  const std::size_t nRows = M.rows();
+  const std::size_t nCols = M.cols();
+
+  if (nCols != nRows)
+  {
+    throw std::runtime_error("ERROR ! M needs to be an quadratic Matrix for "
+                             "calculating the derivatives !\n");
+  }
+
+
+  std::size_t nSize = M.rows();
+  //double EVThres = std::pow(10, -7);
+
+
+  SelfAdjointEigenSolver<MatrixXd> es;
+  es.compute(M);
+
+  std::vector<double> Eigenvalues(nSize);
+  for (std::size_t i = 0; i < nSize; i++)
+  {
+    Eigenvalues[i] = es.eigenvalues()[i]; // bc limit is different for different stuff
+  }
+
+  Eigen::ArrayXd ZeroArray = Eigen::ArrayXd::Zero(nSize);
+
+  std::vector<double> derivX_eigenvalues(nSize);
+
+  for (std::size_t j = 0; j < nSize; j++)
+  {
+    Eigen::VectorXd evj = es.eigenvectors().col(j);
+    derivX_eigenvalues[j] = evj.transpose() * MDiffX * evj;
+  }
+
+
+
+  for (std::size_t i = 0; i < nSize; i++)
+  {
+    res.push_back(Eigenvalues[i]);
+  }
+  for (std::size_t i = 0; i < nSize; i++)
+  {
+    res.push_back(derivX_eigenvalues[i]);
+  }
+
+
+  return res;
+}
+
+
+
+
+Eigen::MatrixXd Class_Potential_Origin::ReduceMatrix(
+      const Eigen::Ref<Eigen::MatrixXd> M, const std::vector<std::size_t> idxlist) const
+{
+  std::size_t nsize = idxlist.size();
+
+  Eigen::MatrixXd res(nsize,nsize);
+
+  for (std::size_t i = 0; i < nsize; i++)
+  {
+    for (std::size_t j = 0; j < nsize; j++)
+    {
+      std::size_t idx_i = idxlist[i];
+      std::size_t idx_j = idxlist[j];
+      res(i,j) = M(idx_i,idx_j);
+
+    }
+  }
+  return res;
+}
+
+
+
+
+
 void Class_Potential_Origin::CalculatePhysicalCouplings()
 {
   if (!SetCurvatureDone) SetCurvatureArrays();
@@ -1436,6 +1971,452 @@ void Class_Potential_Origin::CalculatePhysicalCouplings()
   return;
 }
 
+
+
+void Class_Potential_Origin::CalculatePhysicalCouplings(const std::vector<double> &v)
+{
+  if (!SetCurvatureDone) SetCurvatureArrays();
+  const double ZeroMass = std::pow(10, -5);
+  MatrixXd MassHiggs(NHiggs, NHiggs), MassGauge(NGauge, NGauge);
+  MatrixXcd MassQuark(NQuarks, NQuarks), MassLepton(NLepton, NLepton);
+  MassHiggs  = MatrixXd::Zero(NHiggs, NHiggs);
+  MassGauge  = MatrixXd::Zero(NGauge, NGauge);
+  MassQuark  = MatrixXcd::Zero(NQuarks, NQuarks);
+  MassLepton = MatrixXcd::Zero(NLepton, NLepton);
+
+  MassSquaredGauge.resize(NGauge);
+  MassSquaredHiggs.resize(NHiggs);
+  MassSquaredQuark.resize(NQuarks);
+  MassSquaredLepton.resize(NLepton);
+  HiggsRotationMatrix.resize(NHiggs);
+  for (std::size_t i = 0; i < NHiggs; i++)
+    HiggsRotationMatrix[i].resize(NHiggs);
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      MassHiggs(i, j) += Curvature_Higgs_L2[i][j];
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        MassHiggs(i, j) += Curvature_Higgs_L3[i][j][k] * v[k];
+        for (std::size_t l = 0; l < NHiggs; l++)
+          MassHiggs(i, j) +=
+              0.5 * Curvature_Higgs_L4[i][j][k][l] * v[k] * v[l];
+      }
+    }
+  }
+
+  for (std::size_t a = 0; a < NGauge; a++)
+  {
+    for (std::size_t b = 0; b < NGauge; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          MassGauge(a, b) += 0.5 * Curvature_Gauge_G2H2[a][b][i][j] *
+                             v[i] * v[j];
+        }
+      }
+    }
+  }
+
+  MatrixXcd MIJQuarks = QuarkMassMatrix(v);
+
+  MassQuark = MIJQuarks.conjugate() * MIJQuarks;
+
+  MatrixXcd MIJLeptons = LeptonMassMatrix(v);
+
+  MassLepton = MIJLeptons.conjugate() * MIJLeptons;
+
+  MatrixXd HiggsRot(NHiggs, NHiggs), GaugeRot(NGauge, NGauge),
+      QuarkRot(NQuarks, NQuarks), LepRot(NLepton, NLepton);
+  HiggsRot = MatrixXd::Identity(NHiggs, NHiggs);
+  GaugeRot = MatrixXd::Identity(NGauge, NGauge);
+  QuarkRot = MatrixXd::Identity(NQuarks, NQuarks);
+  LepRot   = MatrixXd::Identity(NLepton, NLepton);
+
+  SelfAdjointEigenSolver<MatrixXd> es;
+
+  es.compute(MassHiggs);
+  HiggsRot = es.eigenvectors().transpose();
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      if (std::abs(HiggsRot(i, j)) < std::pow(10, -10)) HiggsRot(i, j) = 0;
+    }
+  }
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    MassSquaredHiggs[i] = es.eigenvalues()[i];
+    if (std::abs(MassSquaredHiggs[i]) < ZeroMass) MassSquaredHiggs[i] = 0;
+  }
+
+  es.compute(MassGauge);
+  GaugeRot = es.eigenvectors().transpose();
+
+  for (std::size_t i = 0; i < NGauge; i++)
+  {
+    MassSquaredGauge[i] = es.eigenvalues()[i];
+    if (std::abs(MassSquaredGauge[i]) < ZeroMass) MassSquaredGauge[i] = 0;
+  }
+
+  SelfAdjointEigenSolver<MatrixXcd> esQuark(MassQuark);
+  QuarkRot = esQuark.eigenvectors().transpose().real();
+  for (std::size_t i = 0; i < NQuarks; i++)
+    MassSquaredQuark[i] = esQuark.eigenvalues().real()[i];
+
+  SelfAdjointEigenSolver<MatrixXcd> esLepton(MassLepton);
+  LepRot = esLepton.eigenvectors().transpose().real();
+  for (std::size_t i = 0; i < NLepton; i++)
+    MassSquaredLepton[i] = esLepton.eigenvalues().real()[i];
+
+  for (std::size_t a = 0; a < NGauge; a++)
+  {
+    for (std::size_t b = 0; b < NGauge; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        LambdaGauge_3[a][b][i] = 0;
+        for (std::size_t j = 0; j < NHiggs; j++)
+          LambdaGauge_3[a][b][i] +=
+              Curvature_Gauge_G2H2[a][b][i][j] * v[j];
+      }
+    }
+  }
+  for (std::size_t a = 0; a < NHiggs; a++)
+  {
+    for (std::size_t b = 0; b < NHiggs; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        LambdaHiggs_3[a][b][i] = Curvature_Higgs_L3[a][b][i];
+
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          LambdaHiggs_3[a][b][i] +=
+              Curvature_Higgs_L4[a][b][i][j] * v[j];
+        }
+      }
+    }
+  }
+
+  for (std::size_t i = 0; i < NQuarks; i++)
+  {
+    for (std::size_t j = 0; j < NQuarks; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        LambdaQuark_3[i][j][k] = 0;
+        for (std::size_t l = 0; l < NQuarks; l++)
+        {
+          LambdaQuark_3[i][j][k] +=
+              conj(Curvature_Quark_F2H1[i][l][k]) * MIJQuarks(l, j);
+          LambdaQuark_3[i][j][k] +=
+              conj(MIJQuarks(i, l)) * Curvature_Quark_F2H1[l][j][k];
+        }
+        for (std::size_t m = 0; m < NHiggs; m++)
+        {
+          LambdaQuark_4[i][j][k][m] = 0;
+          for (std::size_t l = 0; l < NQuarks; l++)
+          {
+            LambdaQuark_4[i][j][k][m] += conj(Curvature_Quark_F2H1[i][l][k]) *
+                                         Curvature_Quark_F2H1[l][j][m];
+            LambdaQuark_4[i][j][k][m] += conj(Curvature_Quark_F2H1[i][l][m]) *
+                                         Curvature_Quark_F2H1[l][j][k];
+          }
+        }
+      }
+    }
+  }
+
+  for (std::size_t i = 0; i < NLepton; i++)
+  {
+    for (std::size_t j = 0; j < NLepton; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        LambdaLepton_3[i][j][k] = 0;
+        for (std::size_t l = 0; l < NLepton; l++)
+        {
+          LambdaLepton_3[i][j][k] +=
+              conj(Curvature_Lepton_F2H1[i][l][k]) * MIJLeptons(l, j);
+          LambdaLepton_3[i][j][k] +=
+              conj(MIJLeptons(i, l)) * Curvature_Lepton_F2H1[l][j][k];
+        }
+        for (std::size_t m = 0; m < NHiggs; m++)
+        {
+          LambdaLepton_4[i][j][k][m] = 0;
+          for (std::size_t l = 0; l < NLepton; l++)
+          {
+            LambdaLepton_4[i][j][k][m] += conj(Curvature_Lepton_F2H1[i][l][k]) *
+                                          Curvature_Lepton_F2H1[l][j][m];
+            LambdaLepton_4[i][j][k][m] += conj(Curvature_Lepton_F2H1[i][l][m]) *
+                                          Curvature_Lepton_F2H1[l][j][k];
+          }
+        }
+      }
+    }
+  }
+
+  // Rotate and save std::size_to corresponding vectors
+
+  Couplings_Higgs_Quartic.resize(NHiggs);
+  Couplings_Higgs_Triple.resize(NHiggs);
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    Couplings_Higgs_Quartic[i].resize(NHiggs);
+    Couplings_Higgs_Triple[i].resize(NHiggs);
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      Couplings_Higgs_Quartic[i][j].resize(NHiggs);
+      Couplings_Higgs_Triple[i][j].resize(NHiggs);
+      for (std::size_t k = 0; k < NHiggs; k++)
+        Couplings_Higgs_Quartic[i][j][k].resize(NHiggs);
+    }
+  }
+
+  Couplings_Gauge_Higgs_22.resize(NGauge);
+  Couplings_Gauge_Higgs_21.resize(NGauge);
+  for (std::size_t a = 0; a < NGauge; a++)
+  {
+    Couplings_Gauge_Higgs_22[a].resize(NGauge);
+    Couplings_Gauge_Higgs_21[a].resize(NGauge);
+    for (std::size_t b = 0; b < NGauge; b++)
+    {
+      Couplings_Gauge_Higgs_22[a][b].resize(NHiggs);
+      Couplings_Gauge_Higgs_21[a][b].resize(NHiggs);
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        Couplings_Gauge_Higgs_22[a][b][i].resize(NHiggs);
+      }
+    }
+  }
+
+  Couplings_Quark_Higgs_22.resize(NQuarks);
+  Couplings_Quark_Higgs_21.resize(NQuarks);
+  for (std::size_t a = 0; a < NQuarks; a++)
+  {
+    Couplings_Quark_Higgs_22[a].resize(NQuarks);
+    Couplings_Quark_Higgs_21[a].resize(NQuarks);
+    for (std::size_t b = 0; b < NQuarks; b++)
+    {
+      Couplings_Quark_Higgs_22[a][b].resize(NHiggs);
+      Couplings_Quark_Higgs_21[a][b].resize(NHiggs);
+      for (std::size_t i = 0; i < NHiggs; i++)
+        Couplings_Quark_Higgs_22[a][b][i].resize(NHiggs);
+    }
+  }
+
+  Couplings_Lepton_Higgs_22.resize(NLepton);
+  Couplings_Lepton_Higgs_21.resize(NLepton);
+  for (std::size_t a = 0; a < NLepton; a++)
+  {
+    Couplings_Lepton_Higgs_22[a].resize(NLepton);
+    Couplings_Lepton_Higgs_21[a].resize(NLepton);
+    for (std::size_t b = 0; b < NLepton; b++)
+    {
+      Couplings_Lepton_Higgs_22[a][b].resize(NHiggs);
+      Couplings_Lepton_Higgs_21[a][b].resize(NHiggs);
+      for (std::size_t i = 0; i < NHiggs; i++)
+        Couplings_Lepton_Higgs_22[a][b][i].resize(NHiggs);
+    }
+  }
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        Couplings_Higgs_Triple[i][j][k] = 0;
+        for (std::size_t is = 0; is < NHiggs; is++)
+        {
+          for (std::size_t js = 0; js < NHiggs; js++)
+          {
+            for (std::size_t ks = 0; ks < NHiggs; ks++)
+            {
+              Couplings_Higgs_Triple[i][j][k] +=
+                  HiggsRot(i, is) * HiggsRot(j, js) * HiggsRot(k, ks) *
+                  LambdaHiggs_3[is][js][ks];
+            }
+          }
+        }
+        for (std::size_t l = 0; l < NHiggs; l++)
+        {
+          Couplings_Higgs_Quartic[i][j][k][l] = 0;
+          for (std::size_t is = 0; is < NHiggs; is++)
+          {
+            for (std::size_t js = 0; js < NHiggs; js++)
+            {
+              for (std::size_t ks = 0; ks < NHiggs; ks++)
+              {
+                for (std::size_t ls = 0; ls < NHiggs; ls++)
+                {
+                  Couplings_Higgs_Quartic[i][j][k][l] +=
+                      HiggsRot(i, is) * HiggsRot(j, js) * HiggsRot(k, ks) *
+                      HiggsRot(l, ls) * Curvature_Higgs_L4[is][js][ks][ls];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Gauge Rot
+  for (std::size_t a = 0; a < NGauge; a++)
+  {
+    for (std::size_t b = 0; b < NGauge; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        Couplings_Gauge_Higgs_21[a][b][i] = 0;
+        for (std::size_t as = 0; as < NGauge; as++)
+        {
+          for (std::size_t bs = 0; bs < NGauge; bs++)
+          {
+            for (std::size_t is = 0; is < NHiggs; is++)
+              Couplings_Gauge_Higgs_21[a][b][i] +=
+                  GaugeRot(a, as) * GaugeRot(b, bs) * HiggsRot(i, is) *
+                  LambdaGauge_3[as][bs][is];
+          }
+        }
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          Couplings_Gauge_Higgs_22[a][b][i][j] = 0;
+          for (std::size_t as = 0; as < NGauge; as++)
+          {
+            for (std::size_t bs = 0; bs < NGauge; bs++)
+            {
+              for (std::size_t is = 0; is < NHiggs; is++)
+              {
+                for (std::size_t js = 0; js < NHiggs; js++)
+                {
+                  double RotFac = GaugeRot(a, as) * GaugeRot(b, bs) *
+                                  HiggsRot(i, is) * HiggsRot(j, js);
+                  Couplings_Gauge_Higgs_22[a][b][i][j] +=
+                      RotFac * Curvature_Gauge_G2H2[as][bs][is][js];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Quark
+
+  for (std::size_t a = 0; a < NQuarks; a++)
+  {
+    for (std::size_t b = 0; b < NQuarks; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        Couplings_Quark_Higgs_21[a][b][i] = 0;
+        for (std::size_t as = 0; as < NQuarks; as++)
+        {
+          for (std::size_t bs = 0; bs < NQuarks; bs++)
+          {
+            for (std::size_t is = 0; is < NHiggs; is++)
+            {
+              double RotFac =
+                  QuarkRot(a, as) * QuarkRot(b, bs) * HiggsRot(i, is);
+              Couplings_Quark_Higgs_21[a][b][i] +=
+                  RotFac * LambdaQuark_3[as][bs][is];
+            }
+          }
+        }
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          Couplings_Quark_Higgs_22[a][b][i][j] = 0;
+          for (std::size_t as = 0; as < NQuarks; as++)
+          {
+            for (std::size_t bs = 0; bs < NQuarks; bs++)
+            {
+              for (std::size_t is = 0; is < NHiggs; is++)
+              {
+                for (std::size_t js = 0; js < NHiggs; js++)
+                {
+                  double RotFac = QuarkRot(a, as) * QuarkRot(b, bs) *
+                                  HiggsRot(i, is) * HiggsRot(j, js);
+                  Couplings_Quark_Higgs_22[a][b][i][j] +=
+                      RotFac * LambdaQuark_4[as][bs][is][js];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Lepton
+
+  for (std::size_t a = 0; a < NLepton; a++)
+  {
+    for (std::size_t b = 0; b < NLepton; b++)
+    {
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        Couplings_Lepton_Higgs_21[a][b][i] = 0;
+        for (std::size_t as = 0; as < NLepton; as++)
+        {
+          for (std::size_t bs = 0; bs < NLepton; bs++)
+          {
+            for (std::size_t is = 0; is < NHiggs; is++)
+            {
+              double RotFac = LepRot(a, as) * LepRot(b, bs) * HiggsRot(i, is);
+              Couplings_Lepton_Higgs_21[a][b][i] +=
+                  RotFac * LambdaLepton_3[as][bs][is];
+            }
+          }
+        }
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          Couplings_Lepton_Higgs_22[a][b][i][j] = 0;
+          for (std::size_t as = 0; as < NLepton; as++)
+          {
+            for (std::size_t bs = 0; bs < NLepton; bs++)
+            {
+              for (std::size_t is = 0; is < NHiggs; is++)
+              {
+                for (std::size_t js = 0; js < NHiggs; js++)
+                {
+                  double RotFac = LepRot(a, as) * LepRot(b, bs) *
+                                  HiggsRot(i, is) * HiggsRot(j, js);
+                  Couplings_Lepton_Higgs_22[a][b][i][j] +=
+                      RotFac * LambdaLepton_4[as][bs][is][js];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      HiggsRotationMatrix[i][j] = HiggsRot(i, j);
+    }
+  }
+
+  CalcCouplingsDone = true;
+
+  return;
+}
+
+
+
+
 std::vector<double> Class_Potential_Origin::WeinbergFirstDerivative() const
 {
   std::vector<double> res;
@@ -1762,9 +2743,9 @@ std::vector<double> Class_Potential_Origin::WeinbergThirdDerivative() const
           {
             for (std::size_t c = 0; c < NHiggs; c++)
             {
-              double f1 = fbaseTri(MassSquaredHiggs[a],
-                                   MassSquaredHiggs[b],
-                                   MassSquaredHiggs[c]);
+              double f1 = fbaseTri(std::abs(MassSquaredHiggs[a]),
+                                   std::abs(MassSquaredHiggs[b]),
+                                   std::abs(MassSquaredHiggs[c]));
               double f2 = Couplings_Higgs_Triple[a][b][i];
               double f3 = Couplings_Higgs_Triple[b][c][j];
               double f4 = Couplings_Higgs_Triple[c][a][k];
@@ -1772,7 +2753,7 @@ std::vector<double> Class_Potential_Origin::WeinbergThirdDerivative() const
             }
             double f1 = Couplings_Higgs_Quartic[a][b][i][j];
             double f2 = Couplings_Higgs_Triple[b][a][k];
-            double f3 = fbase(MassSquaredHiggs[a], MassSquaredHiggs[b]) -
+            double f3 = fbase(std::abs(MassSquaredHiggs[a]), std::abs(MassSquaredHiggs[b])) -
                         C_CWcbHiggs + 0.5;
             Higgspart[i][j][k] += 3 * f1 * f2 * f3;
           }
@@ -2357,9 +3338,618 @@ std::vector<double> Class_Potential_Origin::WeinbergForthDerivative() const
   return res;
 }
 
+
+
+std::vector<double> Class_Potential_Origin::ThermalThirdDerivative(const std::vector<double> &v, const double &T) const
+{
+  if (T < 1e-3)
+  {
+    std::vector<double> resT0(NHiggs + NHiggs*NHiggs + NHiggs*NHiggs*NHiggs,0);
+    return resT0;
+  }
+
+  const double NumZero = std::pow(10, -10);
+  double prefac       = pow(T,4) / (2.0 * M_PI * M_PI);
+  double daisyprefac  = - T / (12 * M_PI);
+
+  std::vector<double> res;
+
+  std::vector<std::vector<std::vector<double>>> restmp(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+  std::vector<std::vector<std::vector<double>>> QuarkPart(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+  std::vector<std::vector<std::vector<double>>> LeptonPart(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+  std::vector<std::vector<std::vector<double>>> QuarkPartSym(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+  std::vector<std::vector<std::vector<double>>> LeptonPartSym(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+
+  std::vector<std::vector<std::vector<double>>> resGaugeBase(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+  std::vector<std::vector<std::vector<double>>> Higgspart(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+
+  std::vector<std::vector<std::vector<double>>> HiggsDaisy(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+
+  std::vector<std::vector<std::vector<double>>> GaugePart(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+
+  std::vector<std::vector<std::vector<double>>> GaugeDaisy(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+
+  std::vector<std::vector<std::vector<double>>> HiggspartSym(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+
+  std::vector<std::vector<std::vector<double>>> GaugePartSym(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+  std::vector<std::vector<std::vector<double>>> HiggsDaisySym(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+
+  std::vector<std::vector<std::vector<double>>> GaugeDaisySym(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+
+  // for correct description of
+  std::vector<std::size_t> Higgsreducelist = {3,4,5,6,7,8};
+  std::vector<std::size_t> Gaugereducelist = {1,2,3};
+  std::vector<std::size_t> Quarkreducelist = {0,4,8,10};
+  std::vector<std::size_t> Leptonreducelist = {0,2,4,6};
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      //std::cout << "NHiggs - " << i << "|" << j << std::endl;
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        Higgspart[i][j][k] = 0;
+
+        // First calculate Mass derivative
+        Eigen::MatrixXd HiggsMatrix = HiggsMassMatrix(v, 0, 0);
+        // partial derivatives
+        Eigen::MatrixXd DiffHiggsI = HiggsMassMatrix(v, 0, i+1);
+        Eigen::MatrixXd DiffHiggsJ = HiggsMassMatrix(v, 0, j+1);
+        Eigen::MatrixXd DiffHiggsK = HiggsMassMatrix(v, 0, k+1);
+        Eigen::MatrixXd DiffHiggsJI = HiggsMassMatrix(v, 0, j+1, i+1);
+        Eigen::MatrixXd DiffHiggsKI = HiggsMassMatrix(v, 0, k+1, i+1);
+        Eigen::MatrixXd DiffHiggsKJ = HiggsMassMatrix(v, 0, k+1, j+1);
+        Eigen::MatrixXd DiffHiggsKJI = Eigen::MatrixXd::Zero(NHiggs, NHiggs);
+
+        std::vector<double> HiggsMassDerivativeI,HiggsMassDerivativeJ,HiggsMassDerivativeK; // this will be eigenvalues (e, de/dx)
+        HiggsMassDerivativeI = DerivativeOfEigenvalues1(HiggsMatrix, DiffHiggsI);
+        HiggsMassDerivativeJ = DerivativeOfEigenvalues1(HiggsMatrix, DiffHiggsJ);
+        HiggsMassDerivativeK = DerivativeOfEigenvalues1(HiggsMatrix, DiffHiggsK);
+
+        std::vector<double> HiggsMassDerivativeJI,HiggsMassDerivativeKI,HiggsMassDerivativeKJ; // this will be eigenvalues (e, de/dxdy)
+        HiggsMassDerivativeJI = DerivativeOfEigenvalues2(HiggsMatrix, DiffHiggsI,
+                                                      DiffHiggsJ, DiffHiggsJI,
+                                                      Higgsreducelist);
+        HiggsMassDerivativeKI = DerivativeOfEigenvalues2(HiggsMatrix, DiffHiggsI,
+                                                      DiffHiggsK, DiffHiggsKI,
+                                                      Higgsreducelist);
+        HiggsMassDerivativeKJ = DerivativeOfEigenvalues2(HiggsMatrix, DiffHiggsJ,
+                                                      DiffHiggsK, DiffHiggsKJ,
+                                                      Higgsreducelist);
+
+        std::vector<double> HiggsMassDerivativeKJI; // this will be eigenvalues (e, de/dx, de/dxdy, de/dxdydz)
+        HiggsMassDerivativeKJI = DerivativeOfEigenvalues3(HiggsMatrix, DiffHiggsI,
+                                                      DiffHiggsJ, DiffHiggsK,
+                                                      DiffHiggsJI, DiffHiggsKI,
+                                                      DiffHiggsKJ, DiffHiggsKJI,
+                                                      k+1,Higgsreducelist); // z0 = k+1 third derivative
+        for (std::size_t l=0; l < NHiggs; l++)
+        {
+          double msq = HiggsMassDerivativeI.at(l) / (T * T);
+          //std::cout << "m[Higgs; " << l <<" ]sq = " << msq << std::endl;
+          double ThirdJbderivative,SecondJbderivative,FirstJbderivative;
+          if (msq <= 0)
+          {
+            ThirdJbderivative = ThermalFunctions::JbosonInterpolated(msq,3);
+            SecondJbderivative = ThermalFunctions::JbosonInterpolated(msq,2);
+            FirstJbderivative = ThermalFunctions::JbosonInterpolated(msq,1);
+          }
+          else if (msq > 1000)
+          {
+              ThirdJbderivative = 0;
+              SecondJbderivative = ThermalFunctions::JbosonInterpolated(msq,2);
+              FirstJbderivative = ThermalFunctions::JbosonInterpolated(msq,1);
+          }
+          else
+          {
+            ThirdJbderivative = ThermalFunctions::JbosonNumericalIntegration(msq,3);
+            SecondJbderivative = ThermalFunctions::JbosonNumericalIntegration(msq,2);
+            FirstJbderivative = ThermalFunctions::JbosonNumericalIntegration(msq,1);
+          }
+
+          if (ThirdJbderivative < 1e-20)
+            ThirdJbderivative = 0;
+          if (FirstJbderivative < 1e-20)
+            FirstJbderivative = 0;
+          if (SecondJbderivative < 1e-20)
+            SecondJbderivative = 0;
+
+          Higgspart[i][j][k] += ThirdJbderivative * HiggsMassDerivativeI.at(NHiggs+l) *
+                                HiggsMassDerivativeJ.at(NHiggs+l) * HiggsMassDerivativeK.at(NHiggs+l) / pow(T,6) ;
+          Higgspart[i][j][k] += SecondJbderivative *
+                                ( HiggsMassDerivativeK.at(NHiggs+l) * HiggsMassDerivativeJI.at(NHiggs+l) +
+                                  HiggsMassDerivativeJ.at(NHiggs+l) * HiggsMassDerivativeKI.at(NHiggs+l) +
+                                  HiggsMassDerivativeI.at(NHiggs+l) * HiggsMassDerivativeKJ.at(NHiggs+l) )/ pow(T,4);
+          Higgspart[i][j][k] += FirstJbderivative * HiggsMassDerivativeKJI.at(3*NHiggs+l)/ pow(T,2);
+
+          // if ((i==4) & (j==4) & (k==4))
+          // {
+          //     std::cout << "l = " << l << std::endl;
+          //     std::cout << "mHlsq = " << HiggsMassDerivativeI.at(l) << std::endl;
+          //     std::cout << "ysq = " << HiggsMassDerivativeI.at(l) / (T * T) << std::endl;
+          //     std::cout << "ThirdJbderivative = " << ThirdJbderivative << std::endl;
+          //     std::cout << "SecondJbderivative = " << SecondJbderivative << std::endl;
+          //     std::cout << "FirstJbderivative = " << FirstJbderivative << std::endl;
+          //     std::cout << "Higgspart[i,j,k] = " << Higgspart[i][j][k] << std::endl;
+          // }
+
+        }
+
+        //Daisy-Part
+        HiggsDaisy[i][j][k] = 0;
+
+        Eigen::MatrixXd DaisyHiggsMatrix = HiggsMassMatrix(v, T, 0);
+
+        std::vector<double> DaisyHiggsMassDerivativeI,DaisyHiggsMassDerivativeJ,DaisyHiggsMassDerivativeK; // this will be eigenvalues (e, de/dx)
+        DaisyHiggsMassDerivativeI = DerivativeOfEigenvalues1(DaisyHiggsMatrix, DiffHiggsI);
+        DaisyHiggsMassDerivativeJ = DerivativeOfEigenvalues1(DaisyHiggsMatrix, DiffHiggsJ);
+        DaisyHiggsMassDerivativeK = DerivativeOfEigenvalues1(DaisyHiggsMatrix, DiffHiggsK);
+
+        std::vector<double> DaisyHiggsMassDerivativeJI,DaisyHiggsMassDerivativeKI,DaisyHiggsMassDerivativeKJ; // this will be eigenvalues (e, de/dxdy)
+        DaisyHiggsMassDerivativeJI = DerivativeOfEigenvalues2(DaisyHiggsMatrix, DiffHiggsI,
+                                                      DiffHiggsJ, DiffHiggsJI,
+                                                      Higgsreducelist);
+        DaisyHiggsMassDerivativeKI = DerivativeOfEigenvalues2(DaisyHiggsMatrix, DiffHiggsI,
+                                                      DiffHiggsK, DiffHiggsKI,
+                                                      Higgsreducelist);
+        DaisyHiggsMassDerivativeKJ = DerivativeOfEigenvalues2(DaisyHiggsMatrix, DiffHiggsJ,
+                                                      DiffHiggsK, DiffHiggsKJ,
+                                                      Higgsreducelist);
+
+        std::vector<double> DaisyHiggsMassDerivativeKJI; // this will be eigenvalues (e, de/dx, de/dxdy, de/dxdydz)
+        DaisyHiggsMassDerivativeKJI = DerivativeOfEigenvalues3(DaisyHiggsMatrix, DiffHiggsI,
+                                                      DiffHiggsJ, DiffHiggsK,
+                                                      DiffHiggsJI, DiffHiggsKI,
+                                                      DiffHiggsKJ, DiffHiggsKJI,
+                                                      k+1,Higgsreducelist); // z0 = k+1 third derivative
+
+        for (std::size_t l=0; l < NHiggs; l++)
+        {
+          double msq = HiggsMassDerivativeI.at(l);
+          double mbarsq = DaisyHiggsMassDerivativeI.at(l);
+
+          // Daisy-Masses-Part
+          if (mbarsq > 0)
+          {
+            HiggsDaisy[i][j][k] -= pow(mbarsq,-1.5) / 4 * DaisyHiggsMassDerivativeI.at(NHiggs+l) *
+                                        DaisyHiggsMassDerivativeJ.at(NHiggs+l) * DaisyHiggsMassDerivativeK.at(NHiggs+l);
+            HiggsDaisy[i][j][k] += pow(mbarsq,-0.5) / 2. *
+                                    ( DaisyHiggsMassDerivativeK.at(NHiggs+l) * DaisyHiggsMassDerivativeJI.at(NHiggs+l) +
+                                        DaisyHiggsMassDerivativeJ.at(NHiggs+l) * DaisyHiggsMassDerivativeKI.at(NHiggs+l) +
+                                        DaisyHiggsMassDerivativeI.at(NHiggs+l) * DaisyHiggsMassDerivativeKJ.at(NHiggs+l) );
+            HiggsDaisy[i][j][k] += pow(mbarsq,0.5) * DaisyHiggsMassDerivativeKJI.at(3*NHiggs+l);
+          }
+
+          // Tree-Level-Masses-Part
+          if (msq > 0)
+          {
+            HiggsDaisy[i][j][k] += pow(mbarsq,-1.5) / 4 * HiggsMassDerivativeI.at(NHiggs+l) *
+                                        HiggsMassDerivativeJ.at(NHiggs+l) * HiggsMassDerivativeK.at(NHiggs+l);
+            HiggsDaisy[i][j][k] -= pow(mbarsq,-0.5) / 2. *
+                                    ( HiggsMassDerivativeK.at(NHiggs+l) * HiggsMassDerivativeJI.at(NHiggs+l) +
+                                        HiggsMassDerivativeJ.at(NHiggs+l) * HiggsMassDerivativeKI.at(NHiggs+l) +
+                                        HiggsMassDerivativeI.at(NHiggs+l) * HiggsMassDerivativeKJ.at(NHiggs+l) );
+            HiggsDaisy[i][j][k] -= pow(mbarsq,0.5) * HiggsMassDerivativeKJI.at(3*NHiggs+l);
+          }
+        }
+
+
+
+
+        GaugePart[i][j][k] = 0;
+
+        // First calculate Mass derivative
+        Eigen::MatrixXd GaugeMatrix = GaugeMassMatrix(v, 0, 0);
+        // partial derivatives
+        Eigen::MatrixXd DiffGaugeI = GaugeMassMatrix(v, 0, i+1);
+        Eigen::MatrixXd DiffGaugeJ = GaugeMassMatrix(v, 0, j+1);
+        Eigen::MatrixXd DiffGaugeK = GaugeMassMatrix(v, 0, k+1);
+        Eigen::MatrixXd DiffGaugeJI = GaugeMassMatrix(v, 0, j+1, i+1);
+        Eigen::MatrixXd DiffGaugeKI = GaugeMassMatrix(v, 0, k+1, i+1);
+        Eigen::MatrixXd DiffGaugeKJ = GaugeMassMatrix(v, 0, k+1, j+1);
+        Eigen::MatrixXd DiffGaugeKJI = Eigen::MatrixXd::Zero(NGauge, NGauge);
+
+        std::vector<double> GaugeMassDerivativeI,GaugeMassDerivativeJ,GaugeMassDerivativeK; // this will be eigenvalues (e, de/dx)
+        GaugeMassDerivativeI = DerivativeOfEigenvalues1(GaugeMatrix, DiffGaugeI);
+        GaugeMassDerivativeJ = DerivativeOfEigenvalues1(GaugeMatrix, DiffGaugeJ);
+        GaugeMassDerivativeK = DerivativeOfEigenvalues1(GaugeMatrix, DiffGaugeK);
+
+        std::vector<double> GaugeMassDerivativeJI,GaugeMassDerivativeKI,GaugeMassDerivativeKJ; // this will be eigenvalues (e, de/dxdy)
+        GaugeMassDerivativeJI = DerivativeOfEigenvalues2(GaugeMatrix, DiffGaugeI,
+                                                      DiffGaugeJ, DiffGaugeJI,
+                                                      Gaugereducelist);
+        GaugeMassDerivativeKI = DerivativeOfEigenvalues2(GaugeMatrix, DiffGaugeI,
+                                                      DiffGaugeK, DiffGaugeKI,
+                                                      Gaugereducelist);
+        GaugeMassDerivativeKJ = DerivativeOfEigenvalues2(GaugeMatrix, DiffGaugeJ,
+                                                      DiffGaugeK, DiffGaugeKJ,
+                                                      Gaugereducelist);
+
+        std::vector<double> GaugeMassDerivativeKJI; // this will be eigenvalues (e, de/dx, de/dxdy, de/dxdydz)
+        GaugeMassDerivativeKJI = DerivativeOfEigenvalues3(GaugeMatrix, DiffGaugeI,
+                                                      DiffGaugeJ, DiffGaugeK,
+                                                      DiffGaugeJI, DiffGaugeKI,
+                                                      DiffGaugeKJ, DiffGaugeKJI,
+                                                      k+1,Gaugereducelist); // z0 = k+1 third derivative
+        for (std::size_t l=0; l < NGauge; l++)
+        {
+          double msq = GaugeMassDerivativeI.at(l) / (T * T);
+          //std::cout << "m[Gauge; " << l <<" ]sq = " << msq << std::endl;
+          double ThirdJbderivative,SecondJbderivative,FirstJbderivative;
+          if (msq <= 0)
+          {
+            ThirdJbderivative = ThermalFunctions::JbosonInterpolated(msq,3);
+            SecondJbderivative = ThermalFunctions::JbosonInterpolated(msq,2);
+            FirstJbderivative = ThermalFunctions::JbosonInterpolated(msq,1);
+          }
+          else
+          {
+            ThirdJbderivative = ThermalFunctions::JbosonNumericalIntegration(msq,3);
+            SecondJbderivative = ThermalFunctions::JbosonNumericalIntegration(msq,2);
+            FirstJbderivative = ThermalFunctions::JbosonNumericalIntegration(msq,1);
+          }
+          if (ThirdJbderivative < 1e-20)
+            ThirdJbderivative = 0;
+          if (FirstJbderivative < 1e-20)
+            FirstJbderivative = 0;
+          if (SecondJbderivative < 1e-20)
+            SecondJbderivative = 0;
+
+          GaugePart[i][j][k] += ThirdJbderivative * GaugeMassDerivativeI.at(NGauge+l) *
+                                GaugeMassDerivativeJ.at(NGauge+l) * GaugeMassDerivativeK.at(NGauge+l) / pow(T,6) ;
+          GaugePart[i][j][k] += SecondJbderivative *
+                                ( GaugeMassDerivativeK.at(NGauge+l) * GaugeMassDerivativeJI.at(NGauge+l) +
+                                  GaugeMassDerivativeJ.at(NGauge+l) * GaugeMassDerivativeKI.at(NGauge+l) +
+                                  GaugeMassDerivativeI.at(NGauge+l) * GaugeMassDerivativeKJ.at(NGauge+l) )/ pow(T,4);
+          GaugePart[i][j][k] += FirstJbderivative * GaugeMassDerivativeKJI.at(3*NGauge+l)/ pow(T,2);
+
+        }
+
+        //Daisy-Part
+        GaugeDaisy[i][j][k] = 0;
+
+        Eigen::MatrixXd DaisyGaugeMatrix = GaugeMassMatrix(v, T, 0);
+
+        std::vector<double> DaisyGaugeMassDerivativeI,DaisyGaugeMassDerivativeJ,DaisyGaugeMassDerivativeK; // this will be eigenvalues (e, de/dx)
+        DaisyGaugeMassDerivativeI = DerivativeOfEigenvalues1(DaisyGaugeMatrix, DiffGaugeI);
+        DaisyGaugeMassDerivativeJ = DerivativeOfEigenvalues1(DaisyGaugeMatrix, DiffGaugeJ);
+        DaisyGaugeMassDerivativeK = DerivativeOfEigenvalues1(DaisyGaugeMatrix, DiffGaugeK);
+
+        std::vector<double> DaisyGaugeMassDerivativeJI,DaisyGaugeMassDerivativeKI,DaisyGaugeMassDerivativeKJ; // this will be eigenvalues (e, de/dxdy)
+        DaisyGaugeMassDerivativeJI = DerivativeOfEigenvalues2(DaisyGaugeMatrix, DiffGaugeI,
+                                                      DiffGaugeJ, DiffGaugeJI,
+                                                      Gaugereducelist);
+        DaisyGaugeMassDerivativeKI = DerivativeOfEigenvalues2(DaisyGaugeMatrix, DiffGaugeI,
+                                                      DiffGaugeK, DiffGaugeKI,
+                                                      Gaugereducelist);
+        DaisyGaugeMassDerivativeKJ = DerivativeOfEigenvalues2(DaisyGaugeMatrix, DiffGaugeJ,
+                                                      DiffGaugeK, DiffGaugeKJ,
+                                                      Gaugereducelist);
+
+        std::vector<double> DaisyGaugeMassDerivativeKJI; // this will be eigenvalues (e, de/dx, de/dxdy, de/dxdydz)
+        DaisyGaugeMassDerivativeKJI = DerivativeOfEigenvalues3(DaisyGaugeMatrix, DiffGaugeI,
+                                                      DiffGaugeJ, DiffGaugeK,
+                                                      DiffGaugeJI, DiffGaugeKI,
+                                                      DiffGaugeKJ, DiffGaugeKJI,
+                                                      k+1,Gaugereducelist); // z0 = k+1 third derivative
+
+        for (std::size_t l=0; l < NGauge; l++)
+        {
+          double msq = GaugeMassDerivativeI.at(l);
+          double mbarsq = DaisyGaugeMassDerivativeI.at(l);
+
+          // Daisy-Masses-Part
+          if (mbarsq > 0)
+          {
+            GaugeDaisy[i][j][k] -= pow(mbarsq,-1.5) / 4 * DaisyGaugeMassDerivativeI.at(NGauge+l) *
+                                        DaisyGaugeMassDerivativeJ.at(NGauge+l) * DaisyGaugeMassDerivativeK.at(NGauge+l);
+            GaugeDaisy[i][j][k] += pow(mbarsq,-0.5) / 2. *
+                                    ( DaisyGaugeMassDerivativeK.at(NGauge+l) * DaisyGaugeMassDerivativeJI.at(NGauge+l) +
+                                        DaisyGaugeMassDerivativeJ.at(NGauge+l) * DaisyGaugeMassDerivativeKI.at(NGauge+l) +
+                                        DaisyGaugeMassDerivativeI.at(NGauge+l) * DaisyGaugeMassDerivativeKJ.at(NGauge+l) );
+            GaugeDaisy[i][j][k] += pow(mbarsq,0.5) * DaisyGaugeMassDerivativeKJI.at(3*NGauge+l);
+          }
+
+          // Tree-Level-Masses-Part
+          if (msq > 0)
+          {
+            GaugeDaisy[i][j][k] += pow(mbarsq,-1.5) / 4 * GaugeMassDerivativeI.at(NGauge+l) *
+                                        GaugeMassDerivativeJ.at(NGauge+l) * GaugeMassDerivativeK.at(NGauge+l);
+            GaugeDaisy[i][j][k] -= pow(mbarsq,-0.5) / 2. *
+                                    ( GaugeMassDerivativeK.at(NGauge+l) * GaugeMassDerivativeJI.at(NGauge+l) +
+                                        GaugeMassDerivativeJ.at(NGauge+l) * GaugeMassDerivativeKI.at(NGauge+l) +
+                                        GaugeMassDerivativeI.at(NGauge+l) * GaugeMassDerivativeKJ.at(NGauge+l) );
+            GaugeDaisy[i][j][k] -= pow(mbarsq,0.5) * GaugeMassDerivativeKJI.at(3*NGauge+l);
+          }
+        }
+
+
+
+        QuarkPart[i][j][k] = 0;
+
+        // First calculate Mass derivative
+        Eigen::MatrixXd QuarkMatrix = QuarkMassSquaredMatrix(v);
+        // partial derivatives
+        Eigen::MatrixXd DiffQuarkI = QuarkMassSquaredMatrix(v, i+1);
+        Eigen::MatrixXd DiffQuarkJ = QuarkMassSquaredMatrix(v, j+1);
+        Eigen::MatrixXd DiffQuarkK = QuarkMassSquaredMatrix(v, k+1);
+        Eigen::MatrixXd DiffQuarkJI = QuarkMassSquaredMatrix(v, j+1, i+1);
+        Eigen::MatrixXd DiffQuarkKI = QuarkMassSquaredMatrix(v, k+1, i+1);
+        Eigen::MatrixXd DiffQuarkKJ = QuarkMassSquaredMatrix(v, k+1, j+1);
+        Eigen::MatrixXd DiffQuarkKJI = Eigen::MatrixXd::Zero(NQuarks, NQuarks);
+
+        std::vector<double> QuarkMassDerivativeI,QuarkMassDerivativeJ,QuarkMassDerivativeK; // this will be eigenvalues (e, de/dx)
+        QuarkMassDerivativeI = DerivativeOfEigenvalues1(QuarkMatrix, DiffQuarkI);
+        QuarkMassDerivativeJ = DerivativeOfEigenvalues1(QuarkMatrix, DiffQuarkJ);
+        QuarkMassDerivativeK = DerivativeOfEigenvalues1(QuarkMatrix, DiffQuarkK);
+
+        std::vector<double> QuarkMassDerivativeJI,QuarkMassDerivativeKI,QuarkMassDerivativeKJ; // this will be eigenvalues (e, de/dxdy)
+        QuarkMassDerivativeJI = DerivativeOfEigenvalues2(QuarkMatrix, DiffQuarkI,
+                                                      DiffQuarkJ, DiffQuarkJI,
+                                                      Quarkreducelist);
+        QuarkMassDerivativeKI = DerivativeOfEigenvalues2(QuarkMatrix, DiffQuarkI,
+                                                      DiffQuarkK, DiffQuarkKI,
+                                                      Quarkreducelist);
+        QuarkMassDerivativeKJ = DerivativeOfEigenvalues2(QuarkMatrix, DiffQuarkJ,
+                                                      DiffQuarkK, DiffQuarkKJ,
+                                                      Quarkreducelist);
+
+        std::vector<double> QuarkMassDerivativeKJI; // this will be eigenvalues (e, de/dx, de/dxdy, de/dxdydz)
+        QuarkMassDerivativeKJI = DerivativeOfEigenvalues3(QuarkMatrix, DiffQuarkI,
+                                                      DiffQuarkJ, DiffQuarkK,
+                                                      DiffQuarkJI, DiffQuarkKI,
+                                                      DiffQuarkKJ, DiffQuarkKJI,
+                                                      k+1,Quarkreducelist); // z0 = k+1 third derivative
+        for (std::size_t l=0; l < NQuarks; l++)
+        {
+          double msq = QuarkMassDerivativeI.at(l) / (T * T);
+          //std::cout << "m[Quark; " << l <<" ]sq = " << msq << std::endl;
+          double ThirdJbderivative,SecondJbderivative,FirstJbderivative;
+          if (msq <= 0)
+          {
+            ThirdJbderivative = ThermalFunctions::JfermionInterpolated(msq,3);
+            SecondJbderivative = ThermalFunctions::JfermionInterpolated(msq,2);
+            FirstJbderivative = ThermalFunctions::JfermionInterpolated(msq,1);
+          }
+          else
+          {
+            ThirdJbderivative = ThermalFunctions::JfermionNumericalIntegration(msq,3);
+            SecondJbderivative = ThermalFunctions::JfermionNumericalIntegration(msq,2);
+            FirstJbderivative = ThermalFunctions::JfermionNumericalIntegration(msq,1);
+          }
+          if (ThirdJbderivative < 1e-20)
+            ThirdJbderivative = 0;
+          if (FirstJbderivative < 1e-20)
+            FirstJbderivative = 0;
+          if (SecondJbderivative < 1e-20)
+            SecondJbderivative = 0;
+
+          QuarkPart[i][j][k] += ThirdJbderivative * QuarkMassDerivativeI.at(NQuarks+l) *
+                                QuarkMassDerivativeJ.at(NQuarks+l) * QuarkMassDerivativeK.at(NQuarks+l) / pow(T,6) ;
+          QuarkPart[i][j][k] += SecondJbderivative *
+                                ( QuarkMassDerivativeK.at(NQuarks+l) * QuarkMassDerivativeJI.at(NQuarks+l) +
+                                  QuarkMassDerivativeJ.at(NQuarks+l) * QuarkMassDerivativeKI.at(NQuarks+l) +
+                                  QuarkMassDerivativeI.at(NQuarks+l) * QuarkMassDerivativeKJ.at(NQuarks+l) )/ pow(T,4);
+          QuarkPart[i][j][k] += FirstJbderivative * QuarkMassDerivativeKJI.at(3*NQuarks+l)/ pow(T,2);
+
+
+        }
+
+        LeptonPart[i][j][k] = 0;
+
+        // First calculate Mass derivative
+        Eigen::MatrixXd LeptonMatrix = LeptonMassSquaredMatrix(v);
+        // partial derivatives
+        Eigen::MatrixXd DiffLeptonI = LeptonMassSquaredMatrix(v, i+1);
+        Eigen::MatrixXd DiffLeptonJ = LeptonMassSquaredMatrix(v, j+1);
+        Eigen::MatrixXd DiffLeptonK = LeptonMassSquaredMatrix(v, k+1);
+        Eigen::MatrixXd DiffLeptonJI = LeptonMassSquaredMatrix(v, j+1, i+1);
+        Eigen::MatrixXd DiffLeptonKI = LeptonMassSquaredMatrix(v, k+1, i+1);
+        Eigen::MatrixXd DiffLeptonKJ = LeptonMassSquaredMatrix(v, k+1, j+1);
+        Eigen::MatrixXd DiffLeptonKJI = Eigen::MatrixXd::Zero(NLepton, NLepton);
+
+        std::vector<double> LeptonMassDerivativeI,LeptonMassDerivativeJ,LeptonMassDerivativeK; // this will be eigenvalues (e, de/dx)
+        LeptonMassDerivativeI = DerivativeOfEigenvalues1(LeptonMatrix, DiffLeptonI);
+        LeptonMassDerivativeJ = DerivativeOfEigenvalues1(LeptonMatrix, DiffLeptonJ);
+        LeptonMassDerivativeK = DerivativeOfEigenvalues1(LeptonMatrix, DiffLeptonK);
+
+        std::vector<double> LeptonMassDerivativeJI,LeptonMassDerivativeKI,LeptonMassDerivativeKJ; // this will be eigenvalues (e, de/dxdy)
+        LeptonMassDerivativeJI = DerivativeOfEigenvalues2(LeptonMatrix, DiffLeptonI,
+                                                      DiffLeptonJ, DiffLeptonJI,
+                                                      Leptonreducelist);
+        LeptonMassDerivativeKI = DerivativeOfEigenvalues2(LeptonMatrix, DiffLeptonI,
+                                                      DiffLeptonK, DiffLeptonKI,
+                                                      Leptonreducelist);
+        LeptonMassDerivativeKJ = DerivativeOfEigenvalues2(LeptonMatrix, DiffLeptonJ,
+                                                      DiffLeptonK, DiffLeptonKJ,
+                                                      Leptonreducelist);
+
+        std::vector<double> LeptonMassDerivativeKJI; // this will be eigenvalues (e, de/dx, de/dxdy, de/dxdydz)
+        LeptonMassDerivativeKJI = DerivativeOfEigenvalues3(LeptonMatrix, DiffLeptonI,
+                                                      DiffLeptonJ, DiffLeptonK,
+                                                      DiffLeptonJI, DiffLeptonKI,
+                                                      DiffLeptonKJ, DiffLeptonKJI,
+                                                      k+1,Leptonreducelist); // z0 = k+1 third derivative
+        for (std::size_t l=0; l < NLepton; l++)
+        {
+          double msq = LeptonMassDerivativeI.at(l) / (T * T);
+          //std::cout << "m[Lepton; " << l <<" ]sq = " << msq << std::endl;
+          double ThirdJbderivative,SecondJbderivative,FirstJbderivative;
+          if (msq <= 0)
+          {
+            ThirdJbderivative = ThermalFunctions::JfermionInterpolated(msq,3);
+            SecondJbderivative = ThermalFunctions::JfermionInterpolated(msq,2);
+            FirstJbderivative = ThermalFunctions::JfermionInterpolated(msq,1);
+          }
+          else
+          {
+            ThirdJbderivative = ThermalFunctions::JfermionNumericalIntegration(msq,3);
+            SecondJbderivative = ThermalFunctions::JfermionNumericalIntegration(msq,2);
+            FirstJbderivative = ThermalFunctions::JfermionNumericalIntegration(msq,1);
+          }
+          if (ThirdJbderivative < 1e-20)
+            ThirdJbderivative = 0;
+          if (FirstJbderivative < 1e-20)
+            FirstJbderivative = 0;
+          if (SecondJbderivative < 1e-20)
+            SecondJbderivative = 0;
+
+          LeptonPart[i][j][k] += ThirdJbderivative * LeptonMassDerivativeI.at(NLepton+l) *
+                                LeptonMassDerivativeJ.at(NLepton+l) * LeptonMassDerivativeK.at(NLepton+l) / pow(T,6);
+          LeptonPart[i][j][k] += SecondJbderivative *
+                                ( LeptonMassDerivativeK.at(NLepton+l) * LeptonMassDerivativeJI.at(NLepton+l) +
+                                  LeptonMassDerivativeJ.at(NLepton+l) * LeptonMassDerivativeKI.at(NLepton+l) +
+                                  LeptonMassDerivativeI.at(NLepton+l) * LeptonMassDerivativeKJ.at(NLepton+l) )/ pow(T,4);
+          LeptonPart[i][j][k] += FirstJbderivative * LeptonMassDerivativeKJI.at(3*NLepton+l)/ pow(T,2);
+
+        }
+
+      }
+    }
+  }
+
+
+
+  // std::cout << "Higgspart[4][4][4] = " << Higgspart[4][4][4] << std::endl;
+  // std::cout << "GaugePart[4][4][4] = " << Higgspart[4][4][4] << std::endl;
+  // std::cout << "QuarkPart[4][4][4] = " << Higgspart[4][4][4] << std::endl;
+  // std::cout << "LeptonPart[4][4][4] = " << Higgspart[4][4][4] << std::endl;
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        HiggspartSym[i][j][k] = Higgspart[i][j][k] + Higgspart[i][k][j];
+        HiggspartSym[i][j][k] += Higgspart[j][i][k] + Higgspart[j][k][i];
+        HiggspartSym[i][j][k] += Higgspart[k][i][j] + Higgspart[k][j][i];
+        HiggspartSym[i][j][k] *= 1.0 / 6.0;
+
+        GaugePartSym[i][j][k] = GaugePart[i][j][k] + GaugePart[i][k][j];
+        GaugePartSym[i][j][k] += GaugePart[j][i][k] + GaugePart[j][k][i];
+        GaugePartSym[i][j][k] += GaugePart[k][i][j] + GaugePart[k][j][i];
+        GaugePartSym[i][j][k] *= 1.0 / 6.0;
+
+        QuarkPartSym[i][j][k] = QuarkPart[i][j][k] + QuarkPart[i][k][j];
+        QuarkPartSym[i][j][k] += QuarkPart[j][i][k] + QuarkPart[j][k][i];
+        QuarkPartSym[i][j][k] += QuarkPart[k][i][j] + QuarkPart[k][j][i];
+        QuarkPartSym[i][j][k] *= 1.0 / 6.0;
+
+        LeptonPartSym[i][j][k] = LeptonPart[i][j][k] + LeptonPart[i][k][j];
+        LeptonPartSym[i][j][k] += LeptonPart[j][i][k] + LeptonPart[j][k][i];
+        LeptonPartSym[i][j][k] += LeptonPart[k][i][j] + LeptonPart[k][j][i];
+        LeptonPartSym[i][j][k] *= 1.0 / 6.0;
+
+        HiggsDaisySym[i][j][k] = HiggsDaisy[i][j][k] + HiggsDaisy[i][k][j];
+        HiggsDaisySym[i][j][k] += HiggsDaisy[j][i][k] + HiggsDaisy[j][k][i];
+        HiggsDaisySym[i][j][k] += HiggsDaisy[k][i][j] + HiggsDaisy[k][j][i];
+        HiggsDaisySym[i][j][k] *= 1.0 / 6.0;
+
+        GaugeDaisySym[i][j][k] = GaugeDaisy[i][j][k] + GaugeDaisy[i][k][j];
+        GaugeDaisySym[i][j][k] += GaugeDaisy[j][i][k] + GaugeDaisy[j][k][i];
+        GaugeDaisySym[i][j][k] += GaugeDaisy[k][i][j] + GaugeDaisy[k][j][i];
+        GaugeDaisySym[i][j][k] *= 1.0 / 6.0;
+      }
+    }
+  }
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        restmp[i][j][k] = prefac * HiggspartSym[i][j][k];
+        restmp[i][j][k] += 3 * prefac * GaugePartSym[i][j][k];
+        restmp[i][j][k] += -2.0 * prefac * LeptonPartSym[i][j][k];
+        restmp[i][j][k] += -6.0 * prefac * QuarkPartSym[i][j][k];
+        // 1.5 comes from 3rd derivative <-> Daisy-Corrections
+        restmp[i][j][k] += 1.5 * daisyprefac * HiggsDaisySym[i][j][k];
+        restmp[i][j][k] += 1.5 * daisyprefac * GaugeDaisySym[i][j][k];
+      }
+    }
+  }
+
+
+  for (std::size_t l = 0; l < NHiggs; l++)
+  {
+    for (std::size_t m = 0; m < NHiggs; m++)
+    {
+      for (std::size_t n = 0; n < NHiggs; n++)
+      {
+        resGaugeBase[l][m][n] = 0;
+        for (std::size_t i = 0; i < NHiggs; i++)
+        {
+          for (std::size_t j = 0; j < NHiggs; j++)
+          {
+            for (std::size_t k = 0; k < NHiggs; k++)
+            {
+              double RotFac = HiggsRotationMatrix[i][l] *
+                              HiggsRotationMatrix[j][m] *
+                              HiggsRotationMatrix[k][n];
+              resGaugeBase[l][m][n] += RotFac * restmp[i][j][k];//.real(); is real before maybe this needs to be changed
+            }
+          }
+        }
+        //resGaugeBase[l][m][n] *= prefac;
+        if (std::abs(resGaugeBase[l][m][n]) < NumZero)
+          resGaugeBase[l][m][n] = 0;
+        //std::cout << "resGaugeBase[" << l << "][" << m << "][" << n << "] = " << resGaugeBase[l][m][n] << std::endl;
+      }
+    }
+  }
+
+  for (std::size_t l = 0; l < NHiggs; l++)
+  {
+    for (std::size_t m = 0; m < NHiggs; m++)
+    {
+      for (std::size_t n = 0; n < NHiggs; n++)
+      {
+        res.push_back(restmp[l][m][n]); //resGaugeBase
+      }
+    }
+  }
+
+
+
+  return res;
+}
+
+
+
 MatrixXd Class_Potential_Origin::HiggsMassMatrix(const std::vector<double> &v,
                                                  double Temp,
-                                                 int diff) const
+                                                 int diff, int diff2) const
 {
   MatrixXd res(NHiggs, NHiggs);
   if (v.size() != nVEV and v.size() != NHiggs)
@@ -2385,7 +3975,7 @@ MatrixXd Class_Potential_Origin::HiggsMassMatrix(const std::vector<double> &v,
     Logger::Write(LoggingLevel::Default, ss.str());
     std::vector<double> Transformedv;
     Transformedv = MinimizeOrderVEV(v);
-    res          = HiggsMassMatrix(Transformedv, Temp, diff);
+    res          = HiggsMassMatrix(Transformedv, Temp, diff, diff2);
     return res;
   }
   if (!SetCurvatureDone)
@@ -2425,7 +4015,7 @@ MatrixXd Class_Potential_Origin::HiggsMassMatrix(const std::vector<double> &v,
       }
     }
   }
-  else if (static_cast<size_t>(diff) <= NHiggs and diff > 0)
+  else if (static_cast<size_t>(diff) <= NHiggs and diff > 0 and diff2 == 0)
   {
     std::size_t x0 = diff - 1;
     for (std::size_t i = 0; i < NHiggs; i++)
@@ -2436,6 +4026,22 @@ MatrixXd Class_Potential_Origin::HiggsMassMatrix(const std::vector<double> &v,
         for (std::size_t k = 0; k < NHiggs; k++)
         {
           res(i, j) += Curvature_Higgs_L4[i][j][x0][k] * v[k];
+        }
+      }
+    }
+  }
+  else if (static_cast<size_t>(diff) <= NHiggs and diff > 0 and
+           static_cast<size_t>(diff2) <= NHiggs and diff2 > 0)
+  {
+    std::size_t x0 = diff - 1;
+    std::size_t y0 = diff2 - 1;
+    for (std::size_t i = 0; i < NHiggs; i++)
+    {
+      for (std::size_t j = 0; j < NHiggs; j++)
+      {
+        for (std::size_t k = 0; k < NHiggs; k++)
+        {
+          res(i, j) = Curvature_Higgs_L4[i][j][x0][y0];
         }
       }
     }
@@ -2453,6 +4059,275 @@ MatrixXd Class_Potential_Origin::HiggsMassMatrix(const std::vector<double> &v,
   return res;
 }
 
+
+Eigen::MatrixXd Class_Potential_Origin::GaugeMassMatrix(const std::vector<double> &v,
+                                double Temp ,
+                                int diff,
+                                int diff2) const
+{
+  MatrixXd res(NGauge, NGauge);
+  if (v.size() != nVEV and v.size() != NHiggs)
+  {
+    std::string ErrorString =
+        std::string("You have called ") + std::string(__func__) +
+        std::string(
+            " with an invalid vev configuration. Your vev is of dimension ") +
+        std::to_string(v.size()) + std::string(" and it should be ") +
+        std::to_string(NHiggs) + std::string(".");
+    throw std::runtime_error(ErrorString);
+  }
+  if (v.size() == nVEV and nVEV != NHiggs)
+  {
+    std::stringstream ss;
+    ss << __func__
+       << " is being called with a wrong sized vev configuration. It "
+          "has the dimension of "
+       << nVEV << " while it should have " << NHiggs
+       << ". For now this is transformed but please fix this to reduce "
+          "the runtime."
+       << std::endl;
+    Logger::Write(LoggingLevel::Default, ss.str());
+    std::vector<double> Transformedv;
+    Transformedv = MinimizeOrderVEV(v);
+    res          = GaugeMassMatrix(Transformedv, Temp, diff, diff2);
+    return res;
+  }
+  if (!SetCurvatureDone)
+  {
+    //        SetCurvatureArrays();
+    throw std::runtime_error(
+        "SetCurvatureDone is not set. The Model is not initiliased correctly");
+  }
+
+  if (diff == 0)
+  {
+    for (std::size_t a = 0; a < NGauge; a++)
+    {
+      for (std::size_t b = 0; b < NGauge; b++)
+      {
+        res(a, b) = 0;
+        for (std::size_t i = 0; i < NHiggs; i++)
+        {
+          for (std::size_t j = 0; j < NHiggs; j++)
+            res(a, b) +=
+                0.5 * Curvature_Gauge_G2H2[a][b][i][j] * v.at(i) * v.at(j);
+        }
+
+        if (Temp != 0)
+        {
+          res(a, b) += DebyeGauge[a][b] * std::pow(Temp, 2);
+        }
+      }
+    }
+
+    for (std::size_t a{1}; a < NGauge; ++a)
+    {
+      for (std::size_t b{0}; b < a; ++b)
+      {
+        res(a, b) = res(b, a);
+      }
+    }
+  }
+  else if (static_cast<size_t>(diff) <= NHiggs and diff > 0 and diff2 == 0)
+  {
+    std::size_t x0 = diff -1;
+    for (std::size_t a = 0; a < NGauge; a++)
+    {
+      for (std::size_t b = 0; b < NGauge; b++)
+      {
+        res(a, b) = 0;
+        for (std::size_t i = 0; i < NHiggs; i++)
+        {
+          res(a, b) +=
+              Curvature_Gauge_G2H2[a][b][x0][i] * v.at(i);
+        }
+      }
+    }
+
+    for (std::size_t a{1}; a < NGauge; ++a)
+    {
+      for (std::size_t b{0}; b < a; ++b)
+      {
+        res(a, b) = res(b, a);
+      }
+    }
+  }
+  else if (static_cast<size_t>(diff) <= NHiggs and diff > 0 and
+           static_cast<size_t>(diff2) <= NHiggs and diff2 > 0)
+  {
+    std::size_t x0 = diff -1;
+    std::size_t y0 = diff2 -1;
+    for (std::size_t a = 0; a < NGauge; a++)
+    {
+      for (std::size_t b = 0; b < NGauge; b++)
+      {
+        res(a, b) = 0;
+        for (std::size_t i = 0; i < NHiggs; i++)
+        {
+          res(a, b) +=
+              Curvature_Gauge_G2H2[a][b][x0][y0];
+        }
+      }
+    }
+
+    for (std::size_t a{1}; a < NGauge; ++a)
+    {
+      for (std::size_t b{0}; b < a; ++b)
+      {
+        res(a, b) = res(b, a);
+      }
+    }
+  }
+  else if (diff == -1)
+  {
+    for (std::size_t a = 0; a < NGauge; a++)
+    {
+      for (std::size_t b = 0; b < NGauge; b++)
+      {
+        res(a, b) = 2 * DebyeGauge[a][b] * Temp;
+      }
+    }
+
+    for (std::size_t a{1}; a < NGauge; ++a)
+    {
+      for (std::size_t b{0}; b < a; ++b)
+      {
+        res(a, b) = res(b, a);
+      }
+    }
+  }
+  return res;
+}
+
+Eigen::MatrixXd
+Class_Potential_Origin::QuarkMassSquaredMatrix(const std::vector<double> &v,
+                                         const int &diff,
+                                         const int &diff2) const
+{
+  MatrixXd res(NQuarks, NQuarks);
+  if (v.size() != nVEV and v.size() != NHiggs)
+  {
+    std::string ErrorString =
+        std::string("You have called ") + std::string(__func__) +
+        std::string(
+            " with an invalid vev configuration. Your vev is of dimension ") +
+        std::to_string(v.size()) + std::string(" and it should be ") +
+        std::to_string(NHiggs) + std::string(".");
+    throw std::runtime_error(ErrorString);
+  }
+  if (v.size() == nVEV and nVEV != NHiggs)
+  {
+    std::stringstream ss;
+    ss << __func__
+       << " is being called with a wrong sized vev configuration. It "
+          "has the dimension of "
+       << nVEV << " while it should have " << NHiggs
+       << ". For now this is transformed but please fix this to reduce "
+          "the runtime."
+       << std::endl;
+    Logger::Write(LoggingLevel::Default, ss.str());
+    std::vector<double> Transformedv;
+    Transformedv = MinimizeOrderVEV(v);
+    res          = QuarkMassSquaredMatrix(Transformedv, diff, diff2);
+    return res;
+  }
+  if (!SetCurvatureDone)
+  {
+    //        SetCurvatureArrays();
+    throw std::runtime_error(
+        "SetCurvatureDone is not set. The Model is not initiliased correctly");
+  }
+
+  MatrixXcd MIJ(NQuarks, NQuarks);
+  if (diff == 0)
+  {
+    MIJ = QuarkMassMatrix(v);
+    res = (MIJ.conjugate() * MIJ).real();
+  }
+  else if (static_cast<size_t>(diff) <= NHiggs and diff > 0 and diff2 == 0)
+  {
+    MIJ = QuarkMassMatrix(v);
+    MatrixXcd DiffMIJ = QuarkMassMatrix(v,diff);
+
+    res = (DiffMIJ.conjugate() * MIJ + MIJ.conjugate() * DiffMIJ).real();
+  }
+  else if (static_cast<size_t>(diff) <= NHiggs and diff > 0 and
+           static_cast<size_t>(diff2) <= NHiggs and diff2 > 0)
+  {
+    MIJ = QuarkMassMatrix(v);
+    MatrixXcd DiffXMIJ = QuarkMassMatrix(v,diff);
+    MatrixXcd DiffYMIJ = QuarkMassMatrix(v,diff2);
+    res = (DiffXMIJ.conjugate() * DiffYMIJ + DiffYMIJ.conjugate() * DiffXMIJ).real();
+  }
+
+  return res;
+}
+
+Eigen::MatrixXd
+Class_Potential_Origin::LeptonMassSquaredMatrix(const std::vector<double> &v,
+                                         const int &diff,
+                                         const int &diff2) const
+{
+  MatrixXd res(NLepton, NLepton);
+  if (v.size() != nVEV and v.size() != NHiggs)
+  {
+    std::string ErrorString =
+        std::string("You have called ") + std::string(__func__) +
+        std::string(
+            " with an invalid vev configuration. Your vev is of dimension ") +
+        std::to_string(v.size()) + std::string(" and it should be ") +
+        std::to_string(NHiggs) + std::string(".");
+    throw std::runtime_error(ErrorString);
+  }
+  if (v.size() == nVEV and nVEV != NHiggs)
+  {
+    std::stringstream ss;
+    ss << __func__
+       << " is being called with a wrong sized vev configuration. It "
+          "has the dimension of "
+       << nVEV << " while it should have " << NHiggs
+       << ". For now this is transformed but please fix this to reduce "
+          "the runtime."
+       << std::endl;
+    Logger::Write(LoggingLevel::Default, ss.str());
+    std::vector<double> Transformedv;
+    Transformedv = MinimizeOrderVEV(v);
+    res          = LeptonMassSquaredMatrix(Transformedv, diff, diff2);
+    return res;
+  }
+  if (!SetCurvatureDone)
+  {
+    //        SetCurvatureArrays();
+    throw std::runtime_error(
+        "SetCurvatureDone is not set. The Model is not initiliased correctly");
+  }
+
+  MatrixXcd MIJ(NLepton, NLepton);
+  if (diff == 0)
+  {
+    MIJ = LeptonMassMatrix(v);
+    res = (MIJ.conjugate() * MIJ).real();
+  }
+  else if (static_cast<size_t>(diff) <= NHiggs and diff > 0 and diff2 == 0)
+  {
+    MIJ = LeptonMassMatrix(v);
+    MatrixXcd DiffMIJ = LeptonMassMatrix(v,diff);
+
+    res = (DiffMIJ.conjugate() * MIJ + MIJ.conjugate() * DiffMIJ).real();
+  }
+  else if (static_cast<size_t>(diff) <= NHiggs and diff > 0 and
+           static_cast<size_t>(diff2) <= NHiggs and diff2 > 0)
+  {
+    MIJ = LeptonMassMatrix(v);
+    MatrixXcd DiffXMIJ = LeptonMassMatrix(v,diff);
+    MatrixXcd DiffYMIJ = LeptonMassMatrix(v,diff2);
+    res = (DiffXMIJ.conjugate() * DiffYMIJ + DiffYMIJ.conjugate() * DiffXMIJ).real();
+  }
+
+  return res;
+}
+
+
 std::vector<double>
 Class_Potential_Origin::HiggsMassesSquared(const std::vector<double> &v,
                                            const double &Temp,
@@ -2460,7 +4335,7 @@ Class_Potential_Origin::HiggsMassesSquared(const std::vector<double> &v,
 {
   std::vector<double> res;
 
-  auto MassMatrix = HiggsMassMatrix(v, Temp, diff);
+  auto MassMatrix = HiggsMassMatrix(v, Temp, 0); //EU!!!
 
   double ZeroMass = std::pow(10, -5);
 
@@ -3683,7 +5558,8 @@ std::vector<double> Class_Potential_Origin::resetScale(const double &newScale)
 }
 
 Eigen::MatrixXcd
-Class_Potential_Origin::QuarkMassMatrix(const std::vector<double> &v) const
+Class_Potential_Origin::QuarkMassMatrix(const std::vector<double> &v,
+                                        const int &diff) const
 {
   MatrixXcd MIJ(NQuarks, NQuarks);
   if (v.size() != nVEV and v.size() != NHiggs)
@@ -3721,18 +5597,31 @@ Class_Potential_Origin::QuarkMassMatrix(const std::vector<double> &v) const
 
   MIJ = MatrixXcd::Zero(NQuarks, NQuarks);
 
-  for (std::size_t i = 0; i < NQuarks; i++)
+  if (diff == 0)
   {
-    for (std::size_t j = 0; j < NQuarks; j++)
+    for (std::size_t i = 0; i < NQuarks; i++)
     {
-      MIJ(i, j) = Curvature_Quark_F2[i][j];
-      for (std::size_t k = 0; k < NHiggs; k++)
+      for (std::size_t j = 0; j < NQuarks; j++)
       {
-        MIJ(i, j) += Curvature_Quark_F2H1[i][j][k] * v[k];
+        MIJ(i, j) = Curvature_Quark_F2[i][j];
+        for (std::size_t k = 0; k < NHiggs; k++)
+        {
+          MIJ(i, j) += Curvature_Quark_F2H1[i][j][k] * v[k];
+        }
       }
     }
   }
-
+  else if (static_cast<size_t>(diff) <= NHiggs and diff > 0)
+  {
+    std::size_t x0 = diff -1;
+    for (std::size_t i = 0; i < NQuarks; i++)
+    {
+      for (std::size_t j = 0; j < NQuarks; j++)
+      {
+        MIJ(i, j) = Curvature_Quark_F2H1[i][j][x0];
+      }
+    }
+  }
   return MIJ;
 }
 
@@ -3759,7 +5648,8 @@ Class_Potential_Origin::QuarkMasses(const std::vector<double> &v) const
 }
 
 MatrixXcd
-Class_Potential_Origin::LeptonMassMatrix(const std::vector<double> &v) const
+Class_Potential_Origin::LeptonMassMatrix(const std::vector<double> &v,
+                                        const int &diff) const
 {
   MatrixXcd res = MatrixXcd::Zero(NLepton, NLepton);
   if (v.size() != nVEV and v.size() != NHiggs)
@@ -3795,17 +5685,32 @@ Class_Potential_Origin::LeptonMassMatrix(const std::vector<double> &v) const
     throw std::runtime_error(retmes);
   }
 
-  for (std::size_t i = 0; i < NLepton; i++)
+  if (diff == 0)
   {
-    for (std::size_t j = 0; j < NLepton; j++)
+    for (std::size_t i = 0; i < NLepton; i++)
     {
-      res(i, j) = Curvature_Lepton_F2[i][j];
-      for (std::size_t k = 0; k < NHiggs; k++)
+      for (std::size_t j = 0; j < NLepton; j++)
       {
-        res(i, j) += Curvature_Lepton_F2H1[i][j][k] * v[k];
+        res(i, j) = Curvature_Lepton_F2[i][j];
+        for (std::size_t k = 0; k < NHiggs; k++)
+        {
+          res(i, j) += Curvature_Lepton_F2H1[i][j][k] * v[k];
+        }
       }
     }
   }
+  else if (static_cast<size_t>(diff) <= NHiggs and diff > 0)
+  {
+    std::size_t x0 = diff -1;
+    for (std::size_t i = 0; i < NLepton; i++)
+    {
+      for (std::size_t j = 0; j < NLepton; j++)
+      {
+        res(i, j) = Curvature_Lepton_F2H1[i][j][x0];
+      }
+    }
+  }
+  // second derivative automatically zero
 
   return res;
 }

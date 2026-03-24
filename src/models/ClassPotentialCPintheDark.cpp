@@ -56,11 +56,11 @@ Class_Potential_CPintheDark::Class_Potential_CPintheDark(
 
   // Set UseVTreeSimplified to use the tree-level potential defined in
   // VTreeSimplified
-  UseVTreeSimplified = true;
+  UseVTreeSimplified = false;
 
   // Set UseVCounterSimplified to use the counterterm potential defined in
   // VCounterSimplified
-  UseVCounterSimplified = true;
+  UseVCounterSimplified = false;
 }
 
 Class_Potential_CPintheDark::~Class_Potential_CPintheDark()
@@ -151,6 +151,10 @@ Class_Potential_CPintheDark::addLegendTripleCouplings() const
         labels.push_back("CT_" + particles.at(i) + particles.at(j) +
                          particles.at(k));
         labels.push_back("CW_" + particles.at(i) + particles.at(j) +
+                         particles.at(k));
+        labels.push_back("Therm_" + particles.at(i) + particles.at(j) +
+                         particles.at(k));
+        labels.push_back("Num_" + particles.at(i) + particles.at(j) +
                          particles.at(k));
       }
     }
@@ -1278,22 +1282,23 @@ void Class_Potential_CPintheDark::FindMassBasisIndices(
   for (std::size_t i = 0; i < NHiggs; i++)
   // mass base index i corresponds to mass vector sorted in ascending mass
   {
-    bool hasZeroMass = std::abs(HiggsMasses[i]) < ARMZeroThreshold;
+    //bool hasZeroMass = std::abs(HiggsMasses[i]) < ARMZeroThreshold;
     if (std::abs(HiggsRot(i, pos_rho1)) > ARMZeroThreshold)
     {
-      if (not tpos_Gp.has_value() and hasZeroMass)
+      if (not tpos_Gp.has_value()) //and hasZeroMass) removed for thermal
       {
         tpos_Gp = i;
       }
       else
       {
+        std::cout << "Hello I'm here" << std::endl;
         throw std::runtime_error("Error. Goldstone Gp not massless "
                                  "or not diagonal.");
       }
     }
     else if (std::abs(HiggsRot(i, pos_eta1)) > ARMZeroThreshold)
     {
-      if (not tpos_Gm.has_value() and hasZeroMass)
+      if (not tpos_Gm.has_value()) //and hasZeroMass) removed for thermal effects
       {
         tpos_Gm = i;
       }
@@ -1338,7 +1343,7 @@ void Class_Potential_CPintheDark::FindMassBasisIndices(
     }
     else if (std::abs(HiggsRot(i, pos_psi1)) > ARMZeroThreshold)
     {
-      if (not tpos_G0.has_value() and hasZeroMass)
+      if (not tpos_G0.has_value()) //and hasZeroMass) removed for thermal effects
       {
         tpos_G0 = i;
       }
@@ -1554,7 +1559,7 @@ void Class_Potential_CPintheDark::TripleHiggsCouplings()
   if (!CalcCouplingsDone) CalculatePhysicalCouplings();
 
   if (CalculatedTripleCopulings) return;
-  CalculatedTripleCopulings = true;
+  //CalculatedTripleCopulings = true;
 
   MatrixXd HiggsRot(NHiggs, NHiggs);
   for (std::size_t i = 0; i < NHiggs; i++)
@@ -1645,6 +1650,125 @@ void Class_Potential_CPintheDark::TripleHiggsCouplings()
     }
   }
 }
+
+
+// mass basis triple couplings
+void Class_Potential_CPintheDark::TripleHiggsCouplings(const std::vector<double> &v, const double T)
+{
+  if (!SetCurvatureDone) SetCurvatureArrays();
+  //if (!CalcCouplingsDone) CalculatePhysicalCouplings();
+
+  if (CalculatedTripleCopulings) return;
+  //CalculatedTripleCopulings = true;
+
+  MatrixXd HiggsRot(NHiggs, NHiggs);
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      HiggsRot(i, j) = HiggsRotationMatrixEnsuredConvention[i][j];
+    }
+  }
+
+  std::vector<std::size_t> HiggsOrder(NHiggs);
+  HiggsOrder[0] = pos_Gp;
+  HiggsOrder[1] = pos_Gm;
+  HiggsOrder[2] = pos_Hp;
+  HiggsOrder[3] = pos_Hm;
+  HiggsOrder[4] = pos_HSM;
+  HiggsOrder[5] = pos_G0;
+  HiggsOrder[6] = pos_h1;
+  HiggsOrder[7] = pos_h2;
+  HiggsOrder[8] = pos_h3;
+
+  MatrixXd HiggsRotSort(NHiggs, NHiggs);
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    HiggsRotSort.row(i) = HiggsRot.row(HiggsOrder[i]);
+  }
+
+  std::vector<double> TripleDeriv;
+  TripleDeriv = WeinbergThirdDerivative();
+  std::vector<std::vector<std::vector<double>>> CWGaugeBasis(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+
+  std::vector<double> ThermTripleDeriv;
+  ThermTripleDeriv = ThermalThirdDerivative(v,T);
+  std::vector<std::vector<std::vector<double>>> ThermGaugeBasis(
+      NHiggs,
+      std::vector<std::vector<double>>(NHiggs, std::vector<double>(NHiggs)));
+
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        CWGaugeBasis[i][j][k] =
+            TripleDeriv.at(i + j * NHiggs + k * NHiggs * NHiggs);
+        ThermGaugeBasis[i][j][k] =
+            ThermTripleDeriv.at(i + j * NHiggs + k * NHiggs * NHiggs);
+      }
+    }
+  }
+
+  TripleHiggsCorrectionsCWPhysical.resize(NHiggs);
+  TripleHiggsCorrectionsTreePhysical.resize(NHiggs);
+  TripleHiggsCorrectionsCTPhysical.resize(NHiggs);
+  TripleHiggsCorrectionsThermPhysical.resize(NHiggs);
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    TripleHiggsCorrectionsTreePhysical[i].resize(NHiggs);
+    TripleHiggsCorrectionsCWPhysical[i].resize(NHiggs);
+    TripleHiggsCorrectionsCTPhysical[i].resize(NHiggs);
+    TripleHiggsCorrectionsThermPhysical[i].resize(NHiggs);
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      TripleHiggsCorrectionsCWPhysical[i][j].resize(NHiggs);
+      TripleHiggsCorrectionsTreePhysical[i][j].resize(NHiggs);
+      TripleHiggsCorrectionsCTPhysical[i][j].resize(NHiggs);
+      TripleHiggsCorrectionsThermPhysical[i][j].resize(NHiggs);
+    }
+  }
+
+  for (std::size_t i = 0; i < NHiggs; i++)
+  {
+    for (std::size_t j = 0; j < NHiggs; j++)
+    {
+      for (std::size_t k = 0; k < NHiggs; k++)
+      {
+        TripleHiggsCorrectionsCWPhysical[i][j][k]   = 0;
+        TripleHiggsCorrectionsTreePhysical[i][j][k] = 0;
+        TripleHiggsCorrectionsCTPhysical[i][j][k]   = 0;
+        TripleHiggsCorrectionsThermPhysical[i][j][k]= 0;
+        for (std::size_t l = 0; l < NHiggs; l++)
+        {
+          for (std::size_t m = 0; m < NHiggs; m++)
+          {
+            for (std::size_t n = 0; n < NHiggs; n++)
+            {
+              double RotFac =
+                  HiggsRotSort(i, l) * HiggsRotSort(j, m) * HiggsRotSort(k, n);
+              TripleHiggsCorrectionsCWPhysical[i][j][k] +=
+                  RotFac * CWGaugeBasis[l][m][n];
+              TripleHiggsCorrectionsTreePhysical[i][j][k] +=
+                  RotFac * LambdaHiggs_3[l][m][n];
+              TripleHiggsCorrectionsCTPhysical[i][j][k] +=
+                  RotFac * LambdaHiggs_3_CT[l][m][n];
+              TripleHiggsCorrectionsThermPhysical[i][j][k] +=
+                  RotFac * ThermGaugeBasis[l][m][n];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
 
 void Class_Potential_CPintheDark::SetCurvatureArrays()
 {

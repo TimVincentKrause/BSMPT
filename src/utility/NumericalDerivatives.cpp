@@ -79,4 +79,170 @@ HessianNumerical(const std::vector<double> &phi,
 
   return result;
 }
+
+
+std::vector<std::vector<std::vector<double>>>
+ThirdTensorDerivativeNumerical(const std::vector<double> &phi,
+                 const std::function<double(std::vector<double>)> &V,
+                 double eps)
+{
+  std::vector<std::vector<std::vector<double>>> result(phi.size(),
+      std::vector<std::vector<double>>(phi.size(), std::vector<double>(phi.size())));
+  for (size_t k = 0; k < phi.size(); k++)
+  {
+    double val = 0;
+    auto xp    = phi;
+    xp[k] += 3 * eps;
+    val += V(xp);
+
+    xp = phi;
+    xp[k] += eps;
+    val -= 3 * V(xp);
+
+    xp = phi;
+    xp[k] -= eps;
+    val += 3 * V(xp);
+
+    xp = phi;
+    xp[k] -= 3 * eps;
+    val -= V(xp);
+
+    result[k][k][k] = val /(8 * eps * eps * eps);
+    //std::cout << "res[" << k << "] = " << val /(8 * eps * eps * eps) << std::endl;
+
+    for (size_t i = k + 1; i < phi.size(); i++)
+    {
+      double val1 = 0;
+      xp    = phi;
+      xp[i] += 2 * eps;
+      xp[k] += eps;
+      val1 += V(xp);
+
+      xp    = phi;
+      xp[k] += eps;
+      val1 -= 2*V(xp);
+
+      xp    = phi;
+      xp[i] -= 2 * eps;
+      xp[k] += eps;
+      val1 += V(xp);
+
+      xp    = phi;
+      xp[i] += 2 * eps;
+      xp[k] -= eps;
+      val1 -= V(xp);
+
+      xp    = phi;
+      xp[k] -= eps;
+      val1 += 2*V(xp);
+
+      xp    = phi;
+      xp[i] -= 2 * eps;
+      xp[k] -= eps;
+      val1 -= V(xp);
+
+      result[k][i][i] = val1 / (8 * eps * eps * eps);
+      result[i][k][i] = val1 / (8 * eps * eps * eps);
+      result[i][i][k] = val1 / (8 * eps * eps * eps);
+
+      // i <-> k
+      val1 = 0;
+      xp    = phi;
+      xp[k] += 2 * eps;
+      xp[i] += eps;
+      val1 += V(xp);
+
+      xp    = phi;
+      xp[i] += eps;
+      val1 -= 2*V(xp);
+
+      xp    = phi;
+      xp[k] -= 2 * eps;
+      xp[i] += eps;
+      val1 += V(xp);
+
+      xp    = phi;
+      xp[k] += 2 * eps;
+      xp[i] -= eps;
+      val1 -= V(xp);
+
+      xp    = phi;
+      xp[i] -= eps;
+      val1 += 2*V(xp);
+
+      xp    = phi;
+      xp[k] -= 2 * eps;
+      xp[i] -= eps;
+      val1 -= V(xp);
+
+      result[i][k][k] = val1 / (8 * eps * eps * eps);
+      result[k][i][k] = val1 / (8 * eps * eps * eps);
+      result[k][k][i] = val1 / (8 * eps * eps * eps);
+
+      // https://en.wikipedia.org/wiki/Finite_difference
+      for (size_t j = i + 1; j < phi.size(); j++)
+      {
+        double r = 0;
+
+        xp = phi; // F(x+h, y+h, z+h)
+        xp[i] += eps;
+        xp[j] += eps;
+        xp[k] += eps;
+        r += V(xp);
+
+        xp = phi; //-F(x+h, y-h, z+h)
+        xp[i] += eps;
+        xp[j] -= eps;
+        xp[k] += eps;
+        r -= V(xp);
+
+        xp = phi; //-F(x-h, y+h, z+h)
+        xp[i] -= eps;
+        xp[j] += eps;
+        xp[k] += eps;
+        r -= V(xp);
+
+        xp = phi; // F(x-h, y-h, z+h)
+        xp[i] -= eps;
+        xp[j] -= eps;
+        xp[k] += eps;
+        r += V(xp);
+
+        xp = phi; // F(x+h, y+h, z-h)
+        xp[i] += eps;
+        xp[j] += eps;
+        xp[k] -= eps;
+        r -= V(xp);
+
+        xp = phi; //-F(x+h, y-h, z-h)
+        xp[i] += eps;
+        xp[j] -= eps;
+        xp[k] -= eps;
+        r += V(xp);
+
+        xp = phi; //-F(x-h, y+h, z-h)
+        xp[i] -= eps;
+        xp[j] += eps;
+        xp[k] -= eps;
+        r += V(xp);
+
+        xp = phi; // F(x-h, y-h, z-h)
+        xp[i] -= eps;
+        xp[j] -= eps;
+        xp[k] -= eps;
+        r -= V(xp);
+
+        result[k][i][j] = r / (8 * eps * eps * eps);
+        result[k][j][i] = r / (8 * eps * eps * eps);
+        result[i][k][j] = r / (8 * eps * eps * eps);
+        result[j][k][i] = r / (8 * eps * eps * eps);
+        result[i][j][k] = r / (8 * eps * eps * eps);
+        result[j][i][k] = r / (8 * eps * eps * eps);
+      }
+    }
+  }
+  return result;
+}
+
+
 } // namespace BSMPT

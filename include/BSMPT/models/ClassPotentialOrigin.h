@@ -182,6 +182,12 @@ protected:
    */
   std::vector<std::vector<std::vector<double>>>
       TripleHiggsCorrectionsCTPhysical;
+  /**
+   * Storage of the contributions of the thermal potential to the
+   * triple Higgs couplings in the mass basis
+   */
+  std::vector<std::vector<std::vector<double>>>
+      TripleHiggsCorrectionsThermPhysical;
 
   /**
    * @brief SetCurvatureDone Used to check if the tensors are set
@@ -613,6 +619,19 @@ public:
   {
     return TripleHiggsCorrectionsCWPhysical.at(i).at(j).at(k);
   }
+  /**
+   * @brief get_TripleHiggsCorrectionsThermPhysical
+   * @param i
+   * @param j
+   * @param k
+   * @return TripleHiggsCorrectionsThermPhysical[i][j][k]
+   */
+  double get_TripleHiggsCorrectionsThermPhysical(std::size_t i,
+                                              std::size_t j,
+                                              std::size_t k) const
+  {
+    return TripleHiggsCorrectionsThermPhysical.at(i).at(j).at(k);
+  }
 
   /**
    * @brief get_HiggsRotationMatrix
@@ -825,6 +844,11 @@ public:
  */
   void CalculatePhysicalCouplings();
   /**
+  *  Calculates all triple and quartic couplings in the physical basis
+  *  @param vev for at which physical basis is calculated at
+  */
+  void CalculatePhysicalCouplings(const std::vector<double> &v);
+  /**
    * Calculates the first derivative of the Coleman-Weinberg potential evaluated
    * at the tree-level minimum.
    */
@@ -849,6 +873,11 @@ public:
    * tree-level minimum.
    */
   std::vector<double> WeinbergForthDerivative() const;
+   /**
+   * Calculates the third derivative of the thermally corrected potential at the
+   * vev-configuration v. At the Temperature T
+   */
+   std::vector<double> ThermalThirdDerivative(const std::vector<double> &v, const double &T) const;
 
   /**
    * Calculates the Debye corrections to the Higgs mass matrix.
@@ -870,6 +899,12 @@ public:
    * potential to the triple Higgs couplings.
    */
   void Prepare_Triple();
+  /**
+   * Sets a tensor needed to calculate the contribution of the counterterm
+   * potential to the triple Higgs couplings.
+   * @param v at a general vev v
+   */
+  void Prepare_Triple(const std::vector<double> &v);
 
   /**
    * You can give the explicit Debye corrections to the Higgs mass matrix with
@@ -937,8 +972,20 @@ public:
    */
   Eigen::MatrixXd HiggsMassMatrix(const std::vector<double> &v,
                                   double Temp = 0,
-                                  int diff    = 0) const;
+                                  int diff    = 0,
+                                  int diff2    = 0) const;
+    /*
+    *    Just the secondDerivative of diff1 and diff2;
+    *    Here v_i v_j start at 1 and go to NHiggs
+    */
+  Eigen::MatrixXd HiggsMassMatrixSecondDerivative(
+                                  int diff1,
+                                  int diff2) const;
 
+  Eigen::MatrixXd GaugeMassMatrix(const std::vector<double> &v,
+                                  double Temp = 0,
+                                  int diff    = 0,
+                                  int diff2   = 0) const; 
   /**
    * Calculates the gauge mass matrix and saves all eigenvalues
    * @param v the configuration of all VEVs at which the eigenvalues should be
@@ -995,7 +1042,21 @@ public:
    * @return the Mass Matrix for the Quarks of the form $ M^{IJ} = Y^{IJ} +
    * Y^{IJk} v_k $
    */
-  Eigen::MatrixXcd QuarkMassMatrix(const std::vector<double> &v) const;
+  Eigen::MatrixXcd QuarkMassMatrix(const std::vector<double> &v,
+                                   const int &diff    = 0) const;
+
+  /**
+   * @brief QuarkMassSquaredMatrix calculates the MassSquared Matrix
+   * for the Quarks of the form $M^{IJ}^* * M^{IJ}$
+   * @param v the configuration of all VEVs at which the matrix should be
+   * calculated
+   * @param diff 0 returns the masses and i!=0 returns the derivative the Mass
+   * Matrix w.r.t v_i
+   * @return the Mass Matrix for the Quarks of the form $ M^{IJ}^* * M^{IJ}$
+   */
+  Eigen::MatrixXd QuarkMassSquaredMatrix(const std::vector<double> &v,
+                                         const int &diff    = 0,
+                                         const int &diff2    = 0) const;
   /**
    * Calculates the quark mass matrix and saves all eigenvalues, this assumes
    * the same masses for different colours.
@@ -1014,7 +1075,20 @@ public:
    * @return the Mass Matrix for the Leptons of the form $ M^{IJ} = Y^{IJ} +
    * Y^{IJk} v_k $
    */
-  Eigen::MatrixXcd LeptonMassMatrix(const std::vector<double> &v) const;
+  Eigen::MatrixXcd LeptonMassMatrix(const std::vector<double> &v,
+                                    const int &diff    = 0) const;
+  /**
+   * @brief LeptonMassSquaredMatrix calculates the MassSquared Matrix
+   * for the Leptons of the form $M^{IJ}^* * M^{IJ}$
+   * @param v the configuration of all VEVs at which the matrix should be
+   * calculated
+   * @param diff 0 returns the masses and i!=0 returns the derivative the Mass
+   * Matrix w.r.t v_i
+   * @return the Mass Squared Matrix for the Leptons of the form $ M^{IJ}^* * M^{IJ}$
+   */
+  Eigen::MatrixXd LeptonMassSquaredMatrix(const std::vector<double> &v,
+                                         const int &diff    = 0,
+                                         const int &diff2    = 0) const;
 
   /**
    * Zero threshold used for double precision comparisons in
@@ -1036,6 +1110,15 @@ public:
    * set the nTripleCouplings to the number of couplings you want as output.
    */
   virtual void TripleHiggsCouplings() = 0;
+  /**
+   * @brief Calculates the triple Higgs couplings at NLO in the mass basis.
+   * at temperature T and given a specific vev configuration at that temperature.
+   *
+   * @param v the configuration of all VEVs at which are in the minimum of the function
+   *
+   * @param T the Temperature at which the Potential should be evaluated at.
+   */
+  virtual void TripleHiggsCouplings(const std::vector<double> &v, const double T) = 0;
   /**
    * Calculates the function f_{ab}^{(1)} (see https://arxiv.org/abs/1606.07069
    * eq 3.9) needed for the derivatives of the Coleman Weinberg potential.
@@ -1195,6 +1278,55 @@ public:
       const Eigen::Ref<Eigen::MatrixXd> MDiffX,
       const Eigen::Ref<Eigen::MatrixXd> MDiffY,
       const Eigen::Ref<Eigen::MatrixXd> MDiffXY) const;
+
+  /**
+   * I don't get the output of the other function so I implement my own!
+   * @param M : the original matrix
+   * @param MDiffX : the element-wise first derivative of the matrix M with
+   * respect to the first parameter you want to consider
+   * @param MDiffY : the element-wise first derivative of the matrix M with
+   * respect to the second parameter you want to consider
+   * @param MDiffXY : the element-wise second derivative of the matrix M with
+   * respect to both parameters you want to consider
+   * @return the mass eigenvalues in the vector and then the derivatives in the
+   * same order
+   */
+  std::vector<double> DerivativeOfEigenvalues3(
+      const Eigen::Ref<Eigen::MatrixXd> inM,
+      const Eigen::Ref<Eigen::MatrixXd> inMDiffX,
+      const Eigen::Ref<Eigen::MatrixXd> inMDiffY,
+      const Eigen::Ref<Eigen::MatrixXd> inMDiffZ,
+      const Eigen::Ref<Eigen::MatrixXd> inMDiffXY,
+      const Eigen::Ref<Eigen::MatrixXd> inMDiffXZ,
+      const Eigen::Ref<Eigen::MatrixXd> inMDiffYZ,
+      const Eigen::Ref<Eigen::MatrixXd> inMDiffXYZ,
+      const std::size_t diffz, 
+      const std::vector<size_t> reducelist = {}) const;
+
+std::vector<double> DerivativeOfEigenvalues2(
+    const Eigen::Ref<Eigen::MatrixXd> inM,
+    const Eigen::Ref<Eigen::MatrixXd> inMDiffX,
+    const Eigen::Ref<Eigen::MatrixXd> inMDiffY,
+    const Eigen::Ref<Eigen::MatrixXd> inMDiffXY,
+    const std::vector<size_t> reducelist = {}) const;
+
+std::vector<double> DerivativeOfEigenvalues1(
+    const Eigen::Ref<Eigen::MatrixXd> M,
+    const Eigen::Ref<Eigen::MatrixXd> MDiffX) const;
+
+
+    /**
+    *  Input Matrix M and reduce it to some entries
+    * @param M Matric to be reduced
+    * @param idxlist List of indices which should be kept in reduction
+    * @return reduced Matrix
+    */
+  Eigen::MatrixXd ReduceMatrix(
+      const Eigen::Ref<Eigen::MatrixXd> M,
+      const std::vector<std::size_t> idxlist) const;
+
+
+
 
   /**
    * This function will check if the VEV at NLO is still close enough to the LO

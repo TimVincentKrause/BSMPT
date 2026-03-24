@@ -89,6 +89,32 @@ double JbosonIntegrand(const double &x, const double &k, int diff)
           (complex<double>(2, 0) * TmpSqrt *
            (complex<double>(1, 0) - exp(-TmpSqrt)));
   }
+  else if (diff == 2)
+  {
+      // numerical stability
+      if (k < 1e-20)
+          res = 0;
+      else
+      {
+        res = -kcomplex * kcomplex * ((TmpSqrt +
+            complex<double>(1, 0)) - exp(-TmpSqrt) ) * exp(-TmpSqrt) /
+            ( complex<double>(4, 0) * pow((complex<double>(1, 0) - exp(-TmpSqrt) ),2) * pow(TmpSqrt,3));
+      }
+  }
+  else if (diff == 3)
+  {
+      if (k < 1e-20)
+          res = 0;
+      else
+      {
+        res = kcomplex * kcomplex * ( exp(TmpSqrt) * (exp(TmpSqrt) *
+            ( complex<double>(3, 0) * TmpSqrt + kcomplex * kcomplex +
+            xcomplex + complex<double>(3, 0)) - complex<double>(3, 0) *
+            TmpSqrt + kcomplex * kcomplex + xcomplex - complex<double>(6, 0) ) +
+            complex<double>(3, 0) ) / (complex<double>(8, 0) *
+            pow((exp(TmpSqrt)-complex<double>(1, 0)),3) * pow(TmpSqrt,5) );
+      }
+  }
   else
   {
     (void)x;
@@ -114,6 +140,22 @@ double JfermionIntegrand(const double &x, const double &k, int diff)
     res = -kcomplex * kcomplex * exp(-TmpSqrt) /
           (complex<double>(2, 0) * TmpSqrt *
            (complex<double>(1, 0) + exp(-TmpSqrt)));
+  }
+  else if (diff == 2)
+  {
+    res = -kcomplex * kcomplex * ( exp(TmpSqrt) * (TmpSqrt +
+          complex<double>(1, 0)) + complex<double>(1, 0) ) /
+          ( complex<double>(4, 0) * pow((exp(TmpSqrt) +
+          complex<double>(1, 0)),2) * pow(TmpSqrt,3));
+  }
+  else if (diff == 3)
+  {
+    res = kcomplex * kcomplex * ( exp(TmpSqrt) * (-exp(TmpSqrt) *
+          ( complex<double>(3, 0) * TmpSqrt + kcomplex * kcomplex + xcomplex +
+           complex<double>(3, 0)) - complex<double>(3, 0) * TmpSqrt +
+           kcomplex * kcomplex + xcomplex - complex<double>(6, 0) )
+           - complex<double>(3, 0) ) /  (complex<double>(8, 0) *
+           pow((exp(TmpSqrt)+complex<double>(1, 0)),3) * pow(TmpSqrt,5) );
   }
   else
   {
@@ -350,6 +392,14 @@ double JbosonInterpolatedNegative(const double &x, int diff)
   else if (diff == 1)
   {
     PotVal = -JbosonNegativeSpline.deriv(1, -x);
+  }
+  else if (diff == 2)
+  {
+    PotVal = JbosonNegativeSpline.deriv(2, -x);
+  }
+  else if (diff == 3)
+  {
+    PotVal = -JbosonNegativeSpline.deriv(3, -x);
   }
 
   return PotVal;

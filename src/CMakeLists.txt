@@ -80,6 +80,21 @@ if(BSMPTBuildExecutables)
                         TransitionTracer)
   target_compile_features(MinimaTracer PUBLIC cxx_std_17)
 
+  add_executable(ThermalTripleHiggsNLO prog/ThermalTripleHiggsNLO.cpp)
+  target_link_libraries(ThermalTripleHiggsNLO Minimizer Models Utility MinimumTracer
+                        TransitionTracer)
+  target_compile_features(ThermalTripleHiggsNLO PUBLIC cxx_std_17)
+
+    add_executable(ThermalFunctionTest prog/ThermalFunctionTest.cpp)
+  target_link_libraries(ThermalFunctionTest Minimizer Models Utility MinimumTracer
+                        TransitionTracer)
+  target_compile_features(ThermalFunctionTest PUBLIC cxx_std_17)
+
+  add_executable(DEBUGThermalTripleHiggsNLO prog/DEBUGThermalTripleHiggsNLO.cpp)
+  target_link_libraries(DEBUGThermalTripleHiggsNLO Minimizer Models Utility MinimumTracer
+                        TransitionTracer)
+  target_compile_features(DEBUGThermalTripleHiggsNLO PUBLIC cxx_std_17)
+
   add_executable(PotPlotter prog/PotPlotter.cpp)
   target_link_libraries(PotPlotter Models Utility Minimizer MinimumTracer)
   target_compile_features(PotPlotter PUBLIC cxx_std_17)

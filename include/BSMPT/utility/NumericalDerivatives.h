@@ -53,4 +53,30 @@ std::vector<std::vector<double>>
 HessianNumerical(const std::vector<double> &phi,
                  const std::function<double(std::vector<double>)> &V,
                  double eps);
+
+
+/**
+ * @brief Numerical method to calculate the potential's (or other functions's)
+ * 3rd derivative tensor using finite differences method.
+ *
+ * \f$\frac{\partial^2 V}{\partial \phi_i \phi_j} = \frac{1}{4
+ * \epsilon^2}\left(V(\dots, \vec{\phi}_i + \epsilon , \vec{\phi}_j +
+ * \epsilon) - V(\dots, \vec{\phi}_i - \epsilon , \vec{\phi}_j +
+ * \epsilon) - V(\dots, \vec{\phi}_i + \epsilon , \vec{\phi}_j -
+ * \epsilon) + V(\dots, \vec{\phi}_i - \epsilon , \vec{\phi}_j -
+ * \epsilon) \right)\f$
+ *
+ * where \f$ \epsilon \f$ is a small step.
+ *
+ * @param phi Where we want to calculate the Hessian matrix
+ * @param V Potential (or other function)
+ * @param eps Size of finite differences step
+ * @return std::vector<std::vector<double>> The \f$ dim \times \dim \f$
+ *  hessian matrix of V taken at phi
+ */
+std::vector<std::vector<std::vector<double>>>
+ThirdTensorDerivativeNumerical(const std::vector<double> &phi,
+                 const std::function<double(std::vector<double>)> &V,
+                 double eps);
+
 } // namespace BSMPT

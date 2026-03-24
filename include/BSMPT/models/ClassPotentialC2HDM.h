@@ -171,6 +171,7 @@ public:
 
   void AdjustRotationMatrix() override;
   void TripleHiggsCouplings() override;
+  void TripleHiggsCouplings(const std::vector<double> &v, const double T) override { return; };
   std::vector<double> calc_CT() const override;
 
   void SetCurvatureArrays() override;
