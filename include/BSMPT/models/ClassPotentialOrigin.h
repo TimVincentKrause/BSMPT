@@ -294,6 +294,25 @@ protected:
    */
   std::vector<std::vector<double>> HiggsRotationMatrix;
   /**
+   * Storage of the model-specific Higgs rotation matrix for the Higgs mass
+   * matrix at the tree-level Vacuum
+   */
+  std::vector<std::vector<double>> HiggsRotationMatrixEnsuredConvention;
+  /**
+   * Storage of the CPintheDark HiggsRotation rotation matrix
+   */
+  std::vector<std::vector<double>> HiggsRotNeutralCPintheDark;
+  /**
+   * @brief Storage of the HiggsMassesSquared gained from the
+   * 2nd derivative of the effective Potential.
+   * Calculated in AdjustPotentialRotationMatrix in CPintheDark
+   */
+  std::vector<double> PotentialHiggsMassesSquared;
+  /**
+   * @brief Storage of the Dark Sector angles for CPintheDark
+   */
+  std::vector<double> alphas;
+  /**
    * @brief Couplings_Higgs_Quartic Stores the quartic Higgs couplings in the
    * mass base
    */
@@ -561,6 +580,17 @@ public:
     return DebyeHiggs;
   }
 
+  /**
+   * Get more stuff
+   */
+  std::vector<std::vector<double>>  get_HiggsRotationMatrixEnsuredConvention() const
+    { return HiggsRotationMatrixEnsuredConvention; }
+  std::vector<std::vector<double>>  get_HiggsRotNeutralCPintheDark() const
+    { return HiggsRotNeutralCPintheDark; }
+  std::vector<double>  get_PotentialHiggsMassesSquared() const
+    { return PotentialHiggsMassesSquared; }
+  std::vector<double>  get_alphas() const
+    { return alphas; }
   /**
    * @brief set_InputLineNumber
    * @param InputLineNumber_in value to set InputLineNumber
@@ -988,7 +1018,23 @@ public:
    * Y^{IJk} v_k $
    */
   Eigen::MatrixXcd LeptonMassMatrix(const std::vector<double> &v) const;
-
+  /**
+   * Zero threshold used for double precision comparisons in
+   * AdjustRotationMatrix()
+   */
+  const double ARMZeroThreshold = 1e-5;
+  /**
+   * Ensures the correct rotation matrix convention
+   * For Rotation Matrix at vev v and temperature T
+   */
+  virtual void AdjustRotationMatrix(const std::vector<double> &v, const double &T) = 0;
+  /**
+   * Ensures the correct rotation matrix convention
+   * For Rotation Matrix at vev v and temperature T
+   * With HiggsMassMatrix calculated Numerically
+   * as the Second Derivative of the Potential
+   */
+  virtual void AdjustPotentialRotationMatrix(const std::vector<double> &v, const double &T) = 0;
   /**
    * Calculates the triple Higgs couplings at NLO in the mass basis.
    *
