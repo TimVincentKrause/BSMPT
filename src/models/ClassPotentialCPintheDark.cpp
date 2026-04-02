@@ -40,16 +40,12 @@ Class_Potential_CPintheDark::Class_Potential_CPintheDark(
                // tadpole equations
   nParCT = 19; // number of parameters in the counterterm potential
 
-  nVEV = 5; // number of VEVs to minimize the potential
+  nVEV = 1; // number of VEVs to minimize the potential
 
   NHiggs = NNeutralHiggs + NChargedHiggs;
 
   VevOrder.resize(nVEV);
-  VevOrder[0] = 2; // omegaCB
-  VevOrder[1] = 4; // omega1
-  VevOrder[2] = 6; // omega2
-  VevOrder[3] = 7; // omegaCP
-  VevOrder[4] = 8; // omegaS
+  VevOrder[0] = 4; // omega1
 
   // Set UseVTreeSimplified to use the tree-level potential defined in
   // VTreeSimplified
@@ -107,11 +103,7 @@ std::vector<std::string> Class_Potential_CPintheDark::addLegendTemp() const
   labels.push_back("v_c");     // Label for the critical vev
   labels.push_back("v_c/T_c"); // Label for xi_c
   // out += "VEV order";
-  labels.push_back("omega_{CB}(T_c)");
   labels.push_back("omega_1(T_c)");
-  labels.push_back("omega_2(T_c)");
-  labels.push_back("omega_{CP}(T_c)");
-  labels.push_back("omega_S(T_c)");
   return labels;
 }
 
@@ -164,11 +156,7 @@ std::vector<std::string> Class_Potential_CPintheDark::addLegendVEV() const
 {
   std::vector<std::string> labels;
   // out = "Your VEV order";
-  labels.push_back("omega_{CB}");
   labels.push_back("omega_1");
-  labels.push_back("omega_2");
-  labels.push_back("omega_{CP}");
-  labels.push_back("omega_S");
   return labels;
 }
 
@@ -267,11 +255,7 @@ void Class_Potential_CPintheDark::set_gen(const std::vector<double> &par)
   vevTree.resize(NHiggs);
   // set the vector vevTreeMin. vevTree will then be set by the
   // function MinimizeOrderVEV
-  vevTreeMin[0] = 0;
-  vevTreeMin[1] = v1;
-  vevTreeMin[2] = 0;
-  vevTreeMin[3] = 0;
-  vevTreeMin[4] = 0;
+  vevTreeMin[0] = v1;
 
   vevTree = MinimizeOrderVEV(vevTreeMin);
   if (!SetCurvatureDone) SetCurvatureArrays();
