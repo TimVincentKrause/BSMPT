@@ -22,8 +22,8 @@
 #include <BSMPT/models/ClassPotentialCPintheDark.h>
 #include <BSMPT/models/IncludeAllModels.h>
 #include <BSMPT/utility/Logger.h>
-#include <BSMPT/utility/utility.h>
 #include <BSMPT/utility/NumericalDerivatives.h> //EU!!!
+#include <BSMPT/utility/utility.h>
 using namespace Eigen;
 
 namespace BSMPT
@@ -56,11 +56,11 @@ Class_Potential_CPintheDark::Class_Potential_CPintheDark(
 
   // Set UseVTreeSimplified to use the tree-level potential defined in
   // VTreeSimplified
-  UseVTreeSimplified = true;
+  UseVTreeSimplified = false;
 
   // Set UseVCounterSimplified to use the counterterm potential defined in
   // VCounterSimplified
-  UseVCounterSimplified = true;
+  UseVCounterSimplified = false;
 }
 
 Class_Potential_CPintheDark::~Class_Potential_CPintheDark()
@@ -1327,13 +1327,20 @@ void Class_Potential_CPintheDark::FindMassBasisIndices(
 
   // basis = {rho1, eta1, rho2, eta2, zeta1, psi1, zeta2, psi2, rhoS}
   // the rotation matrix is diagonal besides for the neutral dark scalars
+
+  // std::cout << "HiggsMasses" << std::endl;
+  // std::cout << HiggsMasses << std::endl;
+
+  // std::cout << "HiggsRot" << std::endl;
+  // std::cout << HiggsRot << std::endl;
+
   for (std::size_t i = 0; i < NHiggs; i++)
   // mass base index i corresponds to mass vector sorted in ascending mass
   {
-    bool hasZeroMass = std::abs(HiggsMasses[i]) < ARMZeroThreshold;
+    // sbool hasZeroMass = std::abs(HiggsMasses[i]) < ARMZeroThreshold;
     if (std::abs(HiggsRot(i, pos_rho1)) > ARMZeroThreshold)
     {
-      if (not tpos_Gp.has_value() and hasZeroMass)
+      if (not tpos_Gp.has_value())
       {
         tpos_Gp = i;
       }
@@ -1345,7 +1352,7 @@ void Class_Potential_CPintheDark::FindMassBasisIndices(
     }
     else if (std::abs(HiggsRot(i, pos_eta1)) > ARMZeroThreshold)
     {
-      if (not tpos_Gm.has_value() and hasZeroMass)
+      if (not tpos_Gm.has_value())
       {
         tpos_Gm = i;
       }
@@ -1390,7 +1397,7 @@ void Class_Potential_CPintheDark::FindMassBasisIndices(
     }
     else if (std::abs(HiggsRot(i, pos_psi1)) > ARMZeroThreshold)
     {
-      if (not tpos_G0.has_value() and hasZeroMass)
+      if (not tpos_G0.has_value())
       {
         tpos_G0 = i;
       }
@@ -1440,6 +1447,51 @@ void Class_Potential_CPintheDark::FindMassBasisIndices(
     throw std::runtime_error("Error. Not all position indices are set.");
   }
 
+  // if before symmetry breaking all masses are roughly equal the Matrix gets ordered
+  // randomly so we choose the gauge basis then
+  // double eps = 1e-5;
+  // if (std::abs(HiggsMasses.at(tpos_G0.value()) - HiggsMasses.at(tpos_HSM.value())) < eps)
+  // {
+  //     tpos_G0 = pos_psi1;
+  //     tpos_Gp = pos_rho1;
+  //     tpos_Gm = pos_eta1;
+  //     tpos_HSM= pos_zeta1;
+  // }
+  // if (std::abs(HiggsMasses.at(tpos_G0.value()) - HiggsMasses.at(tpos_HSM.value())) < eps)
+  // {
+  //     // Of course if singlet is not h1 then this has to change!
+  //     if (HiggsMasses.at(pos_zeta2) < HiggsMasses.at(pos_psi2))
+  //       {tpos_h2 = pos_zeta2;tpos_h3 = pos_psi2;}
+  //     else
+  //       {tpos_h3 = pos_psi2;tpos_h2 = pos_zeta2;}
+  //     tpos_Hp= pos_rho2;
+  //     tpos_Hm= pos_eta2;
+  // }
+
+  // std::cout << "Uncorrected" << std::endl;
+  // std::cout << "G0 | " << tpos_G0.value() << " | "
+  //           << HiggsMasses.at(tpos_G0.value()) << std::endl;
+  // std::cout << "Gm | " << tpos_Gm.value() << " | "
+  //           << HiggsMasses.at(tpos_Gm.value()) << std::endl;
+  // std::cout << "Gp | " << tpos_Gp.value() << " | "
+  //           << HiggsMasses.at(tpos_Gp.value()) << std::endl;
+  // std::cout << "Hsm| " << tpos_HSM.value() << " | "
+  //           << HiggsMasses.at(tpos_HSM.value()) << std::endl;
+  // std::cout << "Hm | " << tpos_Hm.value() << " | "
+  //           << HiggsMasses.at(tpos_Hm.value()) << std::endl;
+  // std::cout << "Hp | " << tpos_Hp.value() << " | "
+  //           << HiggsMasses.at(tpos_Hp.value()) << std::endl;
+  // std::cout << "h1 | " << tpos_h1.value() << " | "
+  //           << HiggsMasses.at(tpos_h1.value()) << std::endl;
+  // std::cout << "h2 | " << tpos_h2.value() << " | "
+  //           << HiggsMasses.at(tpos_h2.value()) << std::endl;
+  // std::cout << "h3 | " << tpos_h3.value() << " | "
+  //           << HiggsMasses.at(tpos_h3.value()) << std::endl;
+
+  // correct values for similarity (mGp and mHc ~ 0)
+  // only for massive DM sector -> all DM particles are in end of list and h1 is
+  // lightest
+
   pos_Gp  = tpos_Gp.value();
   pos_Gm  = tpos_Gm.value();
   pos_Hp  = tpos_Hp.value();
@@ -1482,7 +1534,9 @@ void Class_Potential_CPintheDark::FindMassBasisIndices(
   }
 }
 
-void Class_Potential_CPintheDark::AdjustRotationMatrix(const std::vector<double> &v, const double &T)
+void Class_Potential_CPintheDark::AdjustRotationMatrix(
+    const std::vector<double> &v,
+    const double &T)
 {
   if (!SetCurvatureDone) SetCurvatureArrays();
   if (!CalcCouplingsdone) CalculatePhysicalCouplings();
@@ -1502,19 +1556,71 @@ void Class_Potential_CPintheDark::AdjustRotationMatrix(const std::vector<double>
 
   // Curently Implemented with debeye masses,
   // But shouldn't this also be the 2nd derivative?
-  MatrixXd MassHiggs = HiggsMassMatrix(v,T);
+  MatrixXd MassHiggs(NHiggs, NHiggs);
+  MassHiggs = HiggsMassMatrix(v, T);
 
-  es.compute(MassHiggs);
-  HiggsRot = es.eigenvectors().transpose();
-  for (std::size_t i = 0; i < NHiggs; i++)
+  double eps = 1e-5;
+  bool no_ssb = true;
+
+  for (std::size_t i = 0; i < v.size(); i++)
   {
-    for (std::size_t j = 0; j < NHiggs; j++)
-    {
-      if (std::abs(HiggsRot(i, j)) < std::pow(10, -10)) HiggsRot(i, j) = 0;
-    }
+      if (v.at(i) > eps) {no_ssb = false;}
   }
 
-  std::vector<double> HiggsMasses = HiggsMassesSquared(vevTree, T);
+  std::vector<double> HiggsMasses(NHiggs);
+  if (no_ssb)
+  {
+
+      HiggsRot = MatrixXd::Zero(NHiggs, NHiggs);
+
+      // Goldstones
+      HiggsRot(pos_rho1,pos_rho1) = 1;
+      HiggsRot(pos_eta1,pos_eta1) = 1;
+
+      HiggsRot(pos_rho2,pos_psi1) = 1;
+      HiggsRot(pos_eta2,pos_zeta1) = 1;
+      HiggsRot(pos_zeta1,pos_rhoS) = -1;
+      HiggsRot(pos_psi1,pos_rho2) = -1;
+      HiggsRot(pos_zeta2,pos_eta2) = -1;
+      HiggsRot(pos_psi2,pos_zeta2) = 1;
+      HiggsRot(pos_rhoS,pos_psi2) = -1;
+
+      // Output of Calculation of Masses
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        HiggsMasses[i] = MassHiggs(i,i);
+        if (std::abs(HiggsMasses[i]) < 1e-5)
+        {
+          HiggsMasses[i] = 0;
+        }
+      }
+      std::sort(HiggsMasses.begin(), HiggsMasses.end());
+  }
+  else
+  {
+      es.compute(MassHiggs);
+      HiggsRot = es.eigenvectors().transpose();
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        for (std::size_t j = 0; j < NHiggs; j++)
+        {
+          if (std::abs(HiggsRot(i, j)) < std::pow(10, -10)) HiggsRot(i, j) = 0;
+        }
+      }
+
+      // Output of Calculation of Masses
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        HiggsMasses[i] = es.eigenvalues()[i];
+        if (std::abs(HiggsMasses[i]) < 1e-5)
+        {
+          HiggsMasses[i] = 0;
+        }
+      }
+  }
+
+
+  // std::vector<double> HiggsMasses = HiggsMassesSquared(v, T);
   if (HiggsMasses.front() <= -ARMZeroThreshold)
   {
     std::stringstream ss;
@@ -1525,6 +1631,34 @@ void Class_Potential_CPintheDark::AdjustRotationMatrix(const std::vector<double>
   }
 
   FindMassBasisIndices(HiggsMasses, HiggsRot);
+
+
+  HiggsSectorPositions.resize(NHiggs);
+  HiggsSectorPositions.at(0) = pos_G0;
+  HiggsSectorPositions.at(1) = pos_Gm;
+  HiggsSectorPositions.at(2) = pos_Gp;
+  HiggsSectorPositions.at(3) = pos_HSM;
+  HiggsSectorPositions.at(4) = pos_Hp;
+  HiggsSectorPositions.at(5) = pos_Hm;
+  HiggsSectorPositions.at(6) = pos_h1;
+  HiggsSectorPositions.at(7) = pos_h2;
+  HiggsSectorPositions.at(8) = pos_h3;
+  // std:: cout << "G0 | " << pos_G0 << " | " << HiggsMasses.at(pos_G0) <<
+  // std::endl; std:: cout << "Gm | " << pos_Gm << " | " <<
+  // HiggsMasses.at(pos_Gm) << std::endl; std:: cout << "Gp | " << pos_Gp << " |
+  // " << HiggsMasses.at(pos_Gp) << std::endl; std:: cout << "Hsm| " <<
+  // pos_HSM<< " | " << HiggsMasses.at(pos_HSM) << std::endl; std:: cout << "Hm
+  // | " << pos_Hm << " | " << HiggsMasses.at(pos_Hm) << std::endl; std:: cout
+  // << "Hp | " << pos_Hp << " | " << HiggsMasses.at(pos_Hp) << std::endl; std::
+  // cout << "h1 | " << pos_h1 << " | " << HiggsMasses.at(pos_h1) << std::endl;
+  // std:: cout << "h2 | " << pos_h2 << " | " << HiggsMasses.at(pos_h2) <<
+  // std::endl; std:: cout << "h3 | " << pos_h3 << " | " <<
+  // HiggsMasses.at(pos_h3) << std::endl; std::cout << "Masses and
+  // G0,Gm,Gp,Hsm,h1,h2,h3,Hm,Hp" << std::endl; std::cout << HiggsMasses <<
+  // std::endl; std::cout << "pos = (" << pos_G0 << "," << pos_Gm << "," <<
+  // pos_Gp << "," << pos_HSM << "," << pos_h1 << ","
+  //           << pos_h2 << "," << pos_h3 << "," << pos_Hm << "," << pos_Hp <<
+  //           ")" << std::endl;
 
   if (HiggsRot(pos_Gp, pos_rho1) < 0) // Gp rho1 (= +1)
   {
@@ -1567,11 +1701,14 @@ void Class_Potential_CPintheDark::AdjustRotationMatrix(const std::vector<double>
     HiggsRot.row(pos_h1) *= -1;
   }
 
+  std::cout << "Higgsrot_b (h3,rhoS) = " << HiggsRot(pos_h3, pos_rhoS) << std::endl;
   // h3 rhoS (condition (2) above, R33 < 0)
   if (HiggsRot(pos_h3, pos_rhoS) < 0)
   {
     // if negative, flip sign of h3
+    std::cout << "-" << std::endl;
     HiggsRot.row(pos_h3) *= -1;
+    std::cout << "Higgsrot_a (h3,rhoS) = " << HiggsRot(pos_h3, pos_rhoS) << std::endl;
   }
 
   // Calculate the determinant AFTER flipping the signs for rows 1 and 3 above
@@ -1593,30 +1730,46 @@ void Class_Potential_CPintheDark::AdjustRotationMatrix(const std::vector<double>
   {
     // if negative, flip sign of h2
     HiggsRot.row(pos_h2) *= -1;
-    HiggsRotNeutral.row(2) *= -1;
+    HiggsRotNeutral.row(1) *= -1;
   }
+
+  std::cout << "HiggsRotNeutral" << std::endl;
+  std::cout << HiggsRotNeutral << std::endl;
 
   HiggsRotNeutralCPintheDark.resize(3);
   for (std::size_t i = 0; i < 3; i++)
   {
     HiggsRotNeutralCPintheDark[i].resize(3);
-    for ( std::size_t j = 0; j < 3; j++)
+    for (std::size_t j = 0; j < 3; j++)
     {
-        HiggsRotNeutralCPintheDark.at(i).at(j) = HiggsRotNeutral(i, j);
+      HiggsRotNeutralCPintheDark.at(i).at(j) = HiggsRotNeutral(i, j);
     }
   }
 
-  // Extract the fixed mixing angles
-  double sina2 = HiggsRot(pos_h1, pos_rhoS); // +sin(a2)
-  double cosa2 = std::sqrt(1.0 - sina2 * sina2);
-  alpha1 = std::asin(HiggsRot(pos_h1, pos_zeta2) / cosa2); // +sin(a1) cos(a2)
-  alpha2 = std::asin(sina2);
-  alpha3 = std::asin(HiggsRot(pos_h2, pos_rhoS) / cosa2); // +cos(a2) sin(a3)
-  alphas.resize(3);
-  alphas[0] = alpha1; alphas[1] = alpha2; alphas[2] = alpha3;
+  if (no_ssb)
+  {
+      alphas[0] = M_PI/2;
+      alphas[1] = -M_PI/2;
+      alphas[2] = 0;
+  }
+  else
+  {
+    // Extract the fixed mixing angles
+    double sina2 = HiggsRot(pos_h1, pos_rhoS); // +sin(a2)
+    double cosa2 = std::sqrt(1.0 - sina2 * sina2);
+    alpha1 = std::asin(HiggsRot(pos_h1, pos_zeta2) / cosa2); // +sin(a1) cos(a2)
+    alpha2 = std::asin(sina2);
+    alpha3 = std::asin(HiggsRot(pos_h2, pos_rhoS) / cosa2); // +cos(a2) sin(a3)
+    alphas.resize(3);
+    alphas[0] = alpha1;
+    alphas[1] = alpha2;
+    alphas[2] = alpha3;
+  }
 
+  HiggsRotationMatrixEnsuredConvention.resize(NHiggs);
   for (std::size_t i = 0; i < NHiggs; i++)
   {
+    HiggsRotationMatrixEnsuredConvention[i].resize(NHiggs);
     for (std::size_t j = 0; j < NHiggs; j++)
     {
       HiggsRotationMatrixEnsuredConvention[i][j] = HiggsRot(i, j);
@@ -1624,8 +1777,9 @@ void Class_Potential_CPintheDark::AdjustRotationMatrix(const std::vector<double>
   }
 }
 
-
-void Class_Potential_CPintheDark::AdjustPotentialRotationMatrix(const std::vector<double> &v, const double &T)
+void Class_Potential_CPintheDark::AdjustPotentialRotationMatrix(
+    const std::vector<double> &v,
+    const double &T)
 {
   if (!SetCurvatureDone) SetCurvatureArrays();
   if (!CalcCouplingsdone) CalculatePhysicalCouplings();
@@ -1643,7 +1797,6 @@ void Class_Potential_CPintheDark::AdjustPotentialRotationMatrix(const std::vecto
 
   SelfAdjointEigenSolver<MatrixXd> es;
 
-
   // calculate the Hessian of the potential
   std::vector<std::vector<double>> MassHiggsNumerical;
   double eps = 0.1;
@@ -1656,35 +1809,87 @@ void Class_Potential_CPintheDark::AdjustPotentialRotationMatrix(const std::vecto
     return VEff(effvev, T, 0, 1);
   };
 
-  MassHiggsNumerical = HessianNumerical(v,Veff, eps);
+  MassHiggsNumerical = HessianNumerical(v, Veff, eps);
 
   MatrixXd MassHiggs(NHiggs, NHiggs);
   for (std::size_t i = 0; i < NHiggs; i++)
   {
     for (std::size_t j = 0; j < NHiggs; j++)
     {
-        MassHiggs(i,j) = MassHiggsNumerical[i][j];
+      // only set Masses to 0 if DM Mass Matrix or same
+      if ((i == j) | ((i > 5) & (j > 5)))
+      {
+        MassHiggs(i, j) = MassHiggsNumerical[i][j];
+      }
+      else if (((i == 7) & (j == 6)) | ((i == 6) & (j == 7)))
+      {
+        MassHiggs(i, j) = 0;
+      }
+      else
+      {
+        MassHiggs(i, j) = 0;
+      }
     }
   }
 
+  eps = 1e-5;
+  bool no_ssb = true;
 
-  es.compute(MassHiggs);
-
-  HiggsRot = es.eigenvectors().transpose();
-  for (std::size_t i = 0; i < NHiggs; i++)
+  for (std::size_t i = 0; i < v.size(); i++)
   {
-    for (std::size_t j = 0; j < NHiggs; j++)
-    {
-      if (std::abs(HiggsRot(i, j)) < std::pow(10, -10)) HiggsRot(i, j) = 0;
-    }
+      if (v.at(i) > eps) {no_ssb = false;}
   }
 
-  // Output of PotentialHiggsMasses
   std::vector<double> HiggsMasses(NHiggs);
-  for (std::size_t i = 0; i < NHiggs; i++)
+  if (no_ssb)
   {
-    HiggsMasses[i] = es.eigenvalues()[i];
-    if (std::abs(HiggsMasses[i]) < 1e-5) {HiggsMasses[i] = 0;}
+      HiggsRot = MatrixXd::Zero(NHiggs, NHiggs);
+
+      // Goldstones
+      HiggsRot(pos_rho1,pos_rho1) = 1;
+      HiggsRot(pos_eta1,pos_eta1) = 1;
+
+      HiggsRot(pos_rho2,pos_psi1) = 1;
+      HiggsRot(pos_eta2,pos_zeta1) = 1;
+      HiggsRot(pos_zeta1,pos_rhoS) = -1;
+      HiggsRot(pos_psi1,pos_rho2) = -1;
+      HiggsRot(pos_zeta2,pos_eta2) = -1;
+      HiggsRot(pos_psi2,pos_zeta2) = 1;
+      HiggsRot(pos_rhoS,pos_psi2) = -1;
+
+      // Output of Calculation of Masses
+      for (std::size_t i = 0; i < NHiggs; i++)
+      {
+        HiggsMasses[i] = MassHiggs(i,i);
+        if (std::abs(HiggsMasses[i]) < 1e-5)
+        {
+          HiggsMasses[i] = 0;
+        }
+      }
+      std::sort(HiggsMasses.begin(), HiggsMasses.end());
+  }
+  else
+  {
+        es.compute(MassHiggs);
+
+        HiggsRot = es.eigenvectors().transpose();
+        for (std::size_t i = 0; i < NHiggs; i++)
+        {
+            for (std::size_t j = 0; j < NHiggs; j++)
+            {
+            if (std::abs(HiggsRot(i, j)) < std::pow(10, -10)) HiggsRot(i, j) = 0;
+            }
+        }
+
+        // Output of PotentialHiggsMasses
+        for (std::size_t i = 0; i < NHiggs; i++)
+        {
+            HiggsMasses[i] = es.eigenvalues()[i];
+            if (std::abs(HiggsMasses[i]) < 1e-5)
+            {
+            HiggsMasses[i] = 0;
+            }
+        }
   }
 
   if (HiggsMasses.front() <= -ARMZeroThreshold)
@@ -1697,6 +1902,17 @@ void Class_Potential_CPintheDark::AdjustPotentialRotationMatrix(const std::vecto
   }
 
   FindMassBasisIndices(HiggsMasses, HiggsRot);
+
+
+  HiggsSectorPositions.at(0) = pos_G0;
+  HiggsSectorPositions.at(1) = pos_Gm;
+  HiggsSectorPositions.at(2) = pos_Gp;
+  HiggsSectorPositions.at(3) = pos_HSM;
+  HiggsSectorPositions.at(4) = pos_Hp;
+  HiggsSectorPositions.at(5) = pos_Hm;
+  HiggsSectorPositions.at(6) = pos_h1;
+  HiggsSectorPositions.at(7) = pos_h2;
+  HiggsSectorPositions.at(8) = pos_h3;
 
   if (HiggsRot(pos_Gp, pos_rho1) < 0) // Gp rho1 (= +1)
   {
@@ -1765,42 +1981,48 @@ void Class_Potential_CPintheDark::AdjustPotentialRotationMatrix(const std::vecto
   {
     // if negative, flip sign of h2
     HiggsRot.row(pos_h2) *= -1;
-    HiggsRotNeutral.row(2) *= -1;
+    HiggsRotNeutral.row(1) *= -1;
   }
 
   HiggsRotNeutralCPintheDark.resize(3);
   for (std::size_t i = 0; i < 3; i++)
   {
     HiggsRotNeutralCPintheDark[i].resize(3);
-    for ( std::size_t j = 0; j < 3; j++)
+    for (std::size_t j = 0; j < 3; j++)
     {
-        HiggsRotNeutralCPintheDark.at(i).at(j) = HiggsRotNeutral(i, j);
+      HiggsRotNeutralCPintheDark.at(i).at(j) = HiggsRotNeutral(i, j);
     }
   }
+  if (no_ssb)
+  {
+      alphas[0] = M_PI/2;
+      alphas[1] = -M_PI/2;
+      alphas[2] = 0;
+  }
+  else
+  {
+    // Extract the fixed mixing angles
+    double sina2 = HiggsRot(pos_h1, pos_rhoS); // +sin(a2)
+    double cosa2 = std::sqrt(1.0 - sina2 * sina2);
+    alpha1 = std::asin(HiggsRot(pos_h1, pos_zeta2) / cosa2); // +sin(a1) cos(a2)
+    alpha2 = std::asin(sina2);
+    alpha3 = std::asin(HiggsRot(pos_h2, pos_rhoS) / cosa2); // +cos(a2) sin(a3)
+    alphas.resize(3);
+    alphas[0] = alpha1;
+    alphas[1] = alpha2;
+    alphas[2] = alpha3;
+  }
 
-  // Extract the fixed mixing angles
-  double sina2 = HiggsRot(pos_h1, pos_rhoS); // +sin(a2)
-  double cosa2 = std::sqrt(1.0 - sina2 * sina2);
-  alpha1 = std::asin(HiggsRot(pos_h1, pos_zeta2) / cosa2); // +sin(a1) cos(a2)
-  alpha2 = std::asin(sina2);
-  alpha3 = std::asin(HiggsRot(pos_h2, pos_rhoS) / cosa2); // +cos(a2) sin(a3)
-  alphas.resize(3);
-  alphas[0] = alpha1; alphas[1] = alpha2; alphas[2] = alpha3;
-
+  PotentialHiggsMassesSquared.resize(NHiggs);
   for (std::size_t i = 0; i < NHiggs; i++)
   {
+    PotentialHiggsMassesSquared.at(i) = HiggsMasses.at(i);
     for (std::size_t j = 0; j < NHiggs; j++)
     {
       HiggsRotationMatrixEnsuredConvention[i][j] = HiggsRot(i, j);
     }
   }
 }
-
-
-
-
-
-
 
 // mass basis triple couplings
 void Class_Potential_CPintheDark::TripleHiggsCouplings()

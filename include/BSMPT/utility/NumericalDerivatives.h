@@ -66,4 +66,8 @@ std::vector<std::vector<double>>
 HessianNumerical(const std::vector<double> &phi,
                  const std::function<double(std::vector<double>)> &V,
                  double eps);
+std::vector<std::vector<double>>
+HessianNumericalo4(const std::vector<double> &phi,
+                 const std::function<double(std::vector<double>)> &V,
+                 double eps);
 } // namespace BSMPT

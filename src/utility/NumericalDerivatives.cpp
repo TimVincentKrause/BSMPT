@@ -136,4 +136,154 @@ HessianNumerical(const std::vector<double> &phi,
 
   return result;
 }
+
+
+std::vector<std::vector<double>>
+HessianNumericalo4(const std::vector<double> &phi,
+                 const std::function<double(std::vector<double>)> &V,
+                 double eps)
+{
+  std::vector<std::vector<double>> result(phi.size(),
+                                          std::vector<double>(phi.size()));
+  for (size_t i = 0; i < phi.size(); i++)
+  {
+    double val = 0;
+    auto xp    = phi;
+    xp[i] += 4 * eps;
+    val += V(xp);
+
+    xp    = phi;
+    xp[i] += 3 * eps;
+    val -= 16 * V(xp);
+
+    xp    = phi;
+    xp[i] += 2 * eps;
+    val += 64 * V(xp);
+
+    xp    = phi;
+    xp[i] += eps;
+    val += 16 * V(xp);
+
+    val -= 130 * V(phi);
+
+    xp    = phi;
+    xp[i] -= eps;
+    val += 16 * V(xp);
+
+    xp    = phi;
+    xp[i] -= 2 * eps;
+    val += 64 * V(xp);
+
+    xp    = phi;
+    xp[i] -= 3 * eps;
+    val -= 16 * V(xp);
+
+    xp    = phi;
+    xp[i] -= 4 * eps;
+    val += V(xp);
+
+    result[i][i] = val / (144 * eps * eps);
+
+    // https://en.wikipedia.org/wiki/Finite_difference
+    for (size_t j = i + 1; j < phi.size(); j++)
+    {
+      double r = 0;
+
+      // F(x+2h,...)
+      xp = phi; // F(x+2h, y+2h)
+      xp[i] += 2 * eps;
+      xp[j] += 2 * eps;
+      r += V(xp);
+
+      xp = phi; // F(x+2h, y+h)
+      xp[i] += 2 * eps;
+      xp[j] += eps;
+      r -= 8 * V(xp);
+
+      xp = phi; // F(x+2h, y-h)
+      xp[i] += 2 * eps;
+      xp[j] -= eps;
+      r += 8 * V(xp);
+
+      xp = phi; // F(x+2h, y-2h)
+      xp[i] += 2 * eps;
+      xp[j] -= 2 * eps;
+      r -= V(xp);
+
+      // F(x+h,...)
+      xp = phi; // F(x+h, y+2h)
+      xp[i] += eps;
+      xp[j] += 2 * eps;
+      r -= 8 * V(xp);
+
+      xp = phi; // F(x+h, y+h)
+      xp[i] += eps;
+      xp[j] += eps;
+      r += 64 * V(xp);
+
+      xp = phi; // F(x+h, y-h)
+      xp[i] += eps;
+      xp[j] -= eps;
+      r -= 64 * V(xp);
+
+      xp = phi; // F(x+h, y-2h)
+      xp[i] += eps;
+      xp[j] -= 2 * eps;
+      r += 8 * V(xp);
+
+      // F(x-h,...)
+      xp = phi; // F(x-h, y+2h)
+      xp[i] -= eps;
+      xp[j] += 2 * eps;
+      r += 8 * V(xp);
+
+      xp = phi; // F(x-h, y+h)
+      xp[i] -= eps;
+      xp[j] += eps;
+      r -= 64 * V(xp);
+
+      xp = phi; // F(x-h, y-h)
+      xp[i] -= eps;
+      xp[j] -= eps;
+      r += 64 * V(xp);
+
+      xp = phi; // F(x-h, y-2h)
+      xp[i] -= eps;
+      xp[j] -= 2 * eps;
+      r -= 8 * V(xp);
+
+      // F(x-2h,...)
+      xp = phi; // F(x-2h, y+2h)
+      xp[i] -= 2 * eps;
+      xp[j] += 2 * eps;
+      r -= V(xp);
+
+      xp = phi; // F(x-2h, y+h)
+      xp[i] -= 2 * eps;
+      xp[j] += eps;
+      r += 8 * V(xp);
+
+      xp = phi; // F(x-2h, y-h)
+      xp[i] -= 2 * eps;
+      xp[j] -= eps;
+      r -= 8 * V(xp);
+
+      xp = phi; // F(x-2h, y-2h)
+      xp[i] -= 2 * eps;
+      xp[j] -= 2 * eps;
+      r += V(xp);
+
+
+      result[i][j] = r / (144 * eps * eps);
+      result[j][i] = r / (144 * eps * eps);
+    }
+  }
+
+  return result;
+}
+
+
+
+
+
 } // namespace BSMPT

@@ -309,6 +309,11 @@ protected:
    */
   std::vector<double> PotentialHiggsMassesSquared;
   /**
+   * @brief Storage of position of Higgs-Vector in
+   * Rotation Matrix
+   */
+  std::vector<std::size_t> HiggsSectorPositions;
+  /**
    * @brief Storage of the Dark Sector angles for CPintheDark
    */
   std::vector<double> alphas;
@@ -589,6 +594,8 @@ public:
     { return HiggsRotNeutralCPintheDark; }
   std::vector<double>  get_PotentialHiggsMassesSquared() const
     { return PotentialHiggsMassesSquared; }
+  std::vector<std::size_t> get_HiggsSectorPositions() const
+    { return HiggsSectorPositions;}
   std::vector<double>  get_alphas() const
     { return alphas; }
   /**

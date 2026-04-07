@@ -120,11 +120,11 @@ public:
                     pos_zeta1 = 4, pos_psi1 = 5, pos_zeta2 = 6, pos_psi2 = 7,
                     pos_rhoS = 8;
 
-    /**
-        * Zero threshold used for double precision comparisons in
-        * AdjustRotationMatrix()
-        */
-    const double ARMZeroThreshold = 1e-5;
+  /**
+   * Zero threshold used for double precision comparisons in
+   * AdjustRotationMatrix()
+   */
+  const double ARMZeroThreshold = 1e-5;
 
   /**
    * Helper function to determine mass indices of rotation matrix
@@ -136,8 +136,10 @@ public:
   void FindMassBasisIndices(const std::vector<double> &HiggsMasses,
                             const Eigen::MatrixXd &HiggsRot);
 
-  void AdjustRotationMatrix(const std::vector<double> &v, const double &T) override;
-  void AdjustPotentialRotationMatrix(const std::vector<double> &v, const double &T) override;
+  void AdjustRotationMatrix(const std::vector<double> &v,
+                            const double &T) override;
+  void AdjustPotentialRotationMatrix(const std::vector<double> &v,
+                                     const double &T) override;
   void TripleHiggsCouplings() override;
   std::vector<double> calc_CT() const override;
 

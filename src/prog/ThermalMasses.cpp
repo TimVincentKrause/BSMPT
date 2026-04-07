@@ -172,81 +172,91 @@ try
             "This code is not ready for handling anything other than "
             "two phases!\n");
 
-      std::cout << "o - 1" << std::endl;
       // prepare legend
       std::vector<std::string> LegendMinima;
       LegendMinima.push_back("status_nlo_stability");
       LegendMinima.push_back("status_ewsr");
       LegendMinima.push_back("status_tracing");
 
-      // LegendMinima.push_back("Temp");
+      LegendMinima.push_back("Temp");
 
 
-      // std::cout << "o - 2" << std::endl;
+      std::size_t NHiggs = modelPointer->get_NHiggs();
 
-      // std::size_t NHiggs = modelPointer->get_NHiggs();
+      for (std::size_t j = 0; j < modelPointer->get_nVEV(); j++)
+        LegendMinima.push_back(modelPointer->addLegendVEV().at(j));
+      // only v dependent masses
+      // potential masses
+      LegendMinima.push_back("mG0sq");
+      LegendMinima.push_back("mGmsq");
+      LegendMinima.push_back("mGpsq");
+      LegendMinima.push_back("mHSMsq");
+      LegendMinima.push_back("mHpsq");
+      LegendMinima.push_back("mHmsq");
+      LegendMinima.push_back("mH1sq");
+      LegendMinima.push_back("mH2sq");
+      LegendMinima.push_back("mH3sq");
+      // v and T dependent masses
+      // potential masses
+      LegendMinima.push_back("mG0sq_T");
+      LegendMinima.push_back("mGmsq_T");
+      LegendMinima.push_back("mGpsq_T");
+      LegendMinima.push_back("mHSMsq_T");
+      LegendMinima.push_back("mHpsq_T");
+      LegendMinima.push_back("mHmsq_T");
+      LegendMinima.push_back("mH1sq_T");
+      LegendMinima.push_back("mH2sq_T");
+      LegendMinima.push_back("mH3sq_T");
 
-      // for (std::size_t j = 0; j < modelPointer->get_nVEV(); j++)
-      //   LegendMinima.push_back(modelPointer->addLegendVEV().at(j));
-      // // only v dependent masses
-      // for (std::size_t j = 0; j < NHiggs; j++)
-      //   LegendMinima.push_back("mS_" + to_string(j) + "sq");
-      // // v and T dependent masses
-      // for (std::size_t j = 0; j < NHiggs; j++)
-      //   LegendMinima.push_back("mS_" + to_string(j) + "sq_T");
-      // for (std::size_t j = 0; j < modelPointer->get_NLepton(); j++)
-      //   LegendMinima.push_back("mL_" + to_string(j) + "sq");
-      // for (std::size_t j = 0; j < modelPointer->get_NQuarks(); j++)
-      //   LegendMinima.push_back("mQ_" + to_string(j) + "sq");
-      // // only v dependent masses
-      // for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
-      //   LegendMinima.push_back("mG_" + to_string(j) + "sq");
-      // // v and T dependent masses
-      // for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
-      //   LegendMinima.push_back("mG_" + to_string(j) + "sq_T");
+      for (std::size_t j = 0; j < modelPointer->get_NLepton(); j++)
+        LegendMinima.push_back("mL_" + to_string(j) + "sq");
+      for (std::size_t j = 0; j < modelPointer->get_NQuarks(); j++)
+        LegendMinima.push_back("mQ_" + to_string(j) + "sq");
+      // only v dependent masses
+      for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
+        LegendMinima.push_back("mG_" + to_string(j) + "sq");
+      // v and T dependent masses
+      for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
+        LegendMinima.push_back("mG_" + to_string(j) + "sq_T");
 
-      // // Angles for Rotation Matrix
-      // LegendMinima.push_back("alpha1_T");
-      // LegendMinima.push_back("alpha2_T");
-      // LegendMinima.push_back("alpha3_T");
+      // Angles for Rotation Matrix
+      LegendMinima.push_back("alpha1_T");
+      LegendMinima.push_back("alpha2_T");
+      LegendMinima.push_back("alpha3_T");
 
-      // std::cout << "o - 3" << std::endl;
-      // // Rotation Matrix for simplicity
-      // for (std::size_t j = 0; j < 3; j++)
-      // {
-      //     for (std::size_t k = 0; k < 3; k++)
-      //     {
-      //         LegendMinima.push_back("MS_" + to_string(j) + to_string(k));
-      //     }
-      // }
+      // Rotation Matrix for simplicity
+      for (std::size_t j = 0; j < 3; j++)
+      {
+          for (std::size_t k = 0; k < 3; k++)
+          {
+              LegendMinima.push_back("MS_" + to_string(j) + to_string(k));
+          }
+      }
 
-      // std::cout << "o - 3.1" << std::endl;
-      // // Angles for PotRotation Matrix
-      // LegendMinima.push_back("alpha1_pot_T");
-      // LegendMinima.push_back("alpha2_pot_T");
-      // LegendMinima.push_back("alpha3_pot_T");
+      // Angles for PotRotation Matrix
+      LegendMinima.push_back("alpha1_pot_T");
+      LegendMinima.push_back("alpha2_pot_T");
+      LegendMinima.push_back("alpha3_pot_T");
 
-      // // Rotation Matrix for simplicity
-      // for (std::size_t j = 0; j < 3; j++)
-      // {
-      //     for (std::size_t k = 0; k < 3; k++)
-      //     {
-      //         LegendMinima.push_back("MS_pot_" + to_string(j) + to_string(k));
-      //     }
-      // }
+      // Rotation Matrix for simplicity
+      for (std::size_t j = 0; j < 3; j++)
+      {
+          for (std::size_t k = 0; k < 3; k++)
+          {
+              LegendMinima.push_back("MS_pot_" + to_string(j) + to_string(k));
+          }
+      }
 
-      // // potential masses
-      // LegendMinima.push_back("mGpsq_pot");
-      // LegendMinima.push_back("mGmsq_pot");
-      // LegendMinima.push_back("mG0sq_pot");
-      // LegendMinima.push_back("mHSMsq_pot");
-      // LegendMinima.push_back("mH1sq_pot");
-      // LegendMinima.push_back("mH2sq_pot");
-      // LegendMinima.push_back("mH3sq_pot");
-      // LegendMinima.push_back("mHpsq_pot");
-      // LegendMinima.push_back("mHmsq_pot");
-
-      // std::cout << "o - 4" << std::endl;
+      // potential masses
+      LegendMinima.push_back("mG0sq_pot");
+      LegendMinima.push_back("mGmsq_pot");
+      LegendMinima.push_back("mGpsq_pot");
+      LegendMinima.push_back("mHSMsq_pot");
+      LegendMinima.push_back("mHpsq_pot");
+      LegendMinima.push_back("mHmsq_pot");
+      LegendMinima.push_back("mH1sq_pot");
+      LegendMinima.push_back("mH2sq_pot");
+      LegendMinima.push_back("mH3sq_pot");
 
       LegendMinima.push_back("runtime");
       outfile << linestr_store << sep << modelPointer->addLegendCT() << sep
@@ -291,6 +301,7 @@ try
                                      T_list.end(),
                                      vac.CoexPhasesList.at(0).crit_temp),
                     vac.CoexPhasesList.at(0).crit_temp);
+      double Tcrit = vac.CoexPhasesList.at(0).crit_temp;
 
       for (const auto T : T_list)
       {
@@ -313,47 +324,89 @@ try
           vev = vac.PhasesList.at(0).Get(T).point;
         }
 
-        //outfile << sep << vev;
-        // outfile << sep
-        //         << modelPointer->HiggsMassesSquared(
-        //                modelPointer->MinimizeOrderVEV(vev), 0);
-        // outfile << sep
-        //         << modelPointer->HiggsMassesSquared(
-        //                 modelPointer->MinimizeOrderVEV(vev), T);
-        // outfile << sep
-        //         << modelPointer->LeptonMassesSquared(
-        //                modelPointer->MinimizeOrderVEV(vev));
-        // outfile << sep
-        //         << modelPointer->QuarkMassesSquared(
-        //                modelPointer->MinimizeOrderVEV(vev));
-        // outfile << sep
-        //         << modelPointer->GaugeMassesSquared(
-        //                modelPointer->MinimizeOrderVEV(vev), 0);
-        // outfile << sep
-        //         << modelPointer->GaugeMassesSquared(
-        //                 modelPointer->MinimizeOrderVEV(vev), T);
+        std::cout << "T = " << T << std::endl;
+
+        std::vector<double> minordervev = modelPointer->MinimizeOrderVEV(vev);
+
+        double vev_eps = 1e-3;
+        for (std::size_t k = 0; k < minordervev.size(); k++)
+        {
+            if (minordervev.at(k) < vev_eps)
+                minordervev[k] = 0;
+        }
+        std::cout << "v = " << minordervev << std::endl;
+
+        outfile << sep << vev;
 
 
-        // // Rotation Matrix stuff (w/ Christophs code)
-        // modelPointer->AdjustRotationMatrix(vev, T);
+        // Rotation Matrix stuff (w/ Christophs code)
+        modelPointer->AdjustRotationMatrix(minordervev, T);
 
-        // outfile << sep
-        //         << modelPointer->get_alphas();
+        //get positions of Higgs
+        std::vector<std::size_t> Higgs_pos = modelPointer->get_HiggsSectorPositions();
 
-        // outfile << sep
-        //         << modelPointer->get_HiggsRotNeutralCPintheDark();
+        std::vector<double> HiggsMasses = modelPointer->HiggsMassesSquared(minordervev, 0);
+        std::vector<double> HiggsMasses_T = modelPointer->HiggsMassesSquared(minordervev, T);
+        for (auto k: Higgs_pos)
+        {
+            outfile << sep
+                    << HiggsMasses.at(k);
+        }
+        for (auto k: Higgs_pos)
+        {
+            outfile << sep
+                    << HiggsMasses_T.at(k);
+        }
 
-        // // Numerical Potential-Masses (and Angles lol)
-        // modelPointer->AdjustPotentialRotationMatrix(vev, T);
+        outfile << sep
+                << modelPointer->LeptonMassesSquared(
+                       minordervev);
+        outfile << sep
+                << modelPointer->QuarkMassesSquared(
+                       minordervev);
+        outfile << sep
+                << modelPointer->GaugeMassesSquared(
+                       minordervev, 0);
+        outfile << sep
+                << modelPointer->GaugeMassesSquared(
+                        minordervev, T);
 
-        // outfile << sep
-        //         << modelPointer->get_alphas();
+        outfile << sep
+                << modelPointer->get_alphas();
 
-        // outfile << sep
-        //         << modelPointer->get_HiggsRotNeutralCPintheDark();
+        outfile << sep
+                << modelPointer->get_HiggsRotNeutralCPintheDark();
 
-        // outfile << sep
-        //         << modelPointer->get_PotentialHiggsMassesSquared();
+
+        MatrixXd MassHiggs(3, 3);
+        for (std::size_t i = 0; i < 3; i++)
+        {
+            for (std::size_t j = 0; j < 3; j++)
+            {
+                MassHiggs(i,j) = modelPointer->get_HiggsRotNeutralCPintheDark()[i][j];
+            }
+        }
+
+        // std::cout << "HiggsRotNeutralCPintheDark" << std::endl;
+        // std::cout << MassHiggs << std::endl;
+
+        // Numerical Potential-Masses (and Angles lol)
+        //
+        modelPointer->AdjustPotentialRotationMatrix(minordervev, T);
+        Higgs_pos = modelPointer->get_HiggsSectorPositions();
+
+        outfile << sep
+                << modelPointer->get_alphas();
+
+        outfile << sep
+                << modelPointer->get_HiggsRotNeutralCPintheDark();
+
+        std::vector<double> HiggsPotMasses = modelPointer->get_PotentialHiggsMassesSquared();
+        for (auto k: Higgs_pos)
+        {
+            outfile << sep
+                    << HiggsPotMasses.at(k);
+                }
 
         auto time = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::high_resolution_clock::now() - start)
