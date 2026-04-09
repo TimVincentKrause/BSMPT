@@ -7,8 +7,20 @@
  * @file minimum tracer class
  */
 
+#include "Eigen/Eigenvalues"           // Eigenvalues utility
+#include <BSMPT/minimizer/Minimizer.h> // for Minimizer
 #include <BSMPT/minimum_tracer/minimum_tracer.h>
+#include <BSMPT/utility/Logger.h> // for Logger Class
 #include <BSMPT/utility/NumericalDerivatives.h>
+#include <BSMPT/utility/asciiplotter/asciiplotter.h>
+#include <BSMPT/utility/utility.h>
+#include <Eigen/Dense> // Eigenvalues matrix
+#include <algorithm>   // std::swap
+#include <chrono>
+#include <cmath>    // std::pow
+#include <memory>   // for shared_ptr
+#include <optional> // std::optional
+#include <stdlib.h> // std::strtol
 
 using namespace Eigen;
 
@@ -727,7 +739,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
 void MinimumTracer::ReduceVEV(std::vector<double> &vev)
 {
   // Saveguard if GroupElements is not populated
-  if (GroupElements.size() == 0) return;
+  if (GroupElements.empty()) return;
   int MaximumMeasure = -1;
   char *ptr;
   std::string BinaryNumber;
@@ -1463,52 +1475,6 @@ Create1DimGrid(const std::vector<double> &min_start,
   return res_vec;
 }
 
-bool almost_the_same(const double &a,
-                     const double &b,
-                     const double &rel_precision,
-                     const double &num_zero)
-{
-  if (std::abs(a) < num_zero and std::abs(b) < num_zero)
-  {
-    return true;
-  }
-  return std::abs(a - b) < std::abs(a + b) / 2 * rel_precision;
-}
-
-bool almost_the_same(const std::vector<double> &a,
-                     const std::vector<double> &b,
-                     const bool &allow_for_sign_flip,
-                     const double &rel_precision,
-                     const double &num_zero)
-{
-  if (a.size() != b.size())
-  {
-    throw std::runtime_error("Error. Vectors must have the same size.");
-  }
-  int count_true = 0;
-  for (std::size_t i = 0; i < a.size(); i++)
-  {
-    if (allow_for_sign_flip)
-    {
-      count_true +=
-          int(almost_the_same(a.at(i), b.at(i), rel_precision, num_zero));
-    }
-    else
-    {
-      count_true += int(almost_the_same(
-          std::abs(a.at(i)), std::abs(b.at(i)), rel_precision, num_zero));
-    }
-  }
-  if (std::size_t(count_true) == a.size())
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
-
 Phase::Phase()
 {
 }
@@ -1529,7 +1495,7 @@ Phase::Phase(const std::vector<double> &phase_start,
   std::vector<Minimum> MinimumList =
       MinTracer->TrackPhase(globMinEndT, phase, initialT, finalT);
 
-  if (MinimumList.size() == 0) return; // Minimum tracker failed
+  if (MinimumList.empty()) return; // Minimum tracker failed
 
   for (auto Min : MinimumList)
   {
@@ -1569,7 +1535,7 @@ Phase::Phase(const double &initialT,
     Add(Min);
   }
 
-  if (MinimumPhaseVector.size() == 0) return; // Found no minimum
+  if (MinimumPhaseVector.empty()) return; // Found no minimum
 
   T_low  = MinimumPhaseVector.front().temp;
   T_high = MinimumPhaseVector.back().temp;
@@ -1591,7 +1557,7 @@ Phase::Phase(const std::vector<double> &phase_start,
   std::vector<Minimum> MinimumList =
       MinTracer->TrackPhase(phase, initialT, finalT);
 
-  if (MinimumList.size() == 0) return; // Minimum tracker failed
+  if (MinimumList.empty()) return; // Minimum tracker failed
 
   for (auto Min : MinimumList)
   {
@@ -1630,7 +1596,7 @@ Phase::Phase(const double &initialT,
     Add(Min);
   }
 
-  if (MinimumPhaseVector.size() == 0) return; // Found no minimum
+  if (MinimumPhaseVector.empty()) return; // Found no minimum
 
   T_low  = MinimumPhaseVector.front().temp;
   T_high = MinimumPhaseVector.back().temp;
@@ -1655,7 +1621,7 @@ Phase::Phase(const double &initialT,
     std::vector<Minimum> MinimumList =
         MinTracer->TrackPhase(phase_start, initialT, HighT);
 
-    if (MinimumList.size() == 0) return; // Minimum tracker failed
+    if (MinimumList.empty()) return; // Minimum tracker failed
 
     for (auto Min : MinimumList)
     {
@@ -1667,7 +1633,7 @@ Phase::Phase(const double &initialT,
     std::vector<Minimum> MinimumList =
         MinTracer->TrackPhase(phase_start, initialT, LowT);
 
-    if (MinimumList.size() == 0) return; // Minimum tracker failed
+    if (MinimumList.empty()) return; // Minimum tracker failed
 
     for (auto Min : MinimumList)
     {
@@ -1696,7 +1662,7 @@ Phase::Phase(const double &initialT,
     throw std::invalid_argument("Initial temperature out of bounds.");
   }
 
-  if (MinimumPhaseVector.size() == 0) return; // Found no minimum
+  if (MinimumPhaseVector.empty()) return; // Found no minimum
 
   T_low  = MinimumPhaseVector.front().temp;
   T_high = MinimumPhaseVector.back().temp;
@@ -1765,7 +1731,7 @@ void Phase::Add(Minimum min)
     }
   }
   // If the list is empty add that value in.
-  if (MinimumPhaseVector.size() == 0)
+  if (MinimumPhaseVector.empty())
   {
     MinimumPhaseVector = {min};
     return;
@@ -2233,7 +2199,7 @@ void Vacuum::PrintPhasesDiagram(int size)
   if (not Logger::GetLoggingLevelStatus(LoggingLevel::MinTracerDetailed))
     return;
 
-  if (PhasesList.size() == 0)
+  if (PhasesList.empty())
   {
     Logger::Write(LoggingLevel::MinTracerDetailed,
                   "Cannot print phase diagram. No phase found.");
@@ -2430,7 +2396,7 @@ Vacuum::Vacuum(const double &T_lowIn,
     print(newPhase);
   }
 
-  if (PhasesList.size() == 0) // no phases could be found
+  if (PhasesList.empty()) // no phases could be found
   {
     status_vacuum = StatusTracing::Failure;
   }
@@ -2440,12 +2406,68 @@ Vacuum::Vacuum(const double &T_lowIn,
        status_vacuum == StatusTracing::NoCoverage)) // no_coverage can get fixed
                                                     // in setCoexRegion
   {
-    orderPhases();
+    // Swaps the phases to make the global minimum the position 0 of the
+    // PhasesList vector; // calls orderPhases
+    EnsureHighTemperatureGlobalMininum();
+
+    if (PhasesList.size() > 0)
+    {
+      PrintPhasesDiagram();
+    }
+  }
+}
+
+void Vacuum::EnsureHighTemperatureGlobalMininum()
+{
+  // Order phase, i.e. puts higher Thighs first
+  orderPhases();
+
+  // Check if Phase list is empty
+  if (PhasesList.empty())
+  {
+    Logger::Write(LoggingLevel::MinTracerDetailed,
+                  "No traceable phase found. Abort.");
+    status_vacuum = StatusTracing::Failure;
+    return;
   }
 
-  PrintPhasesDiagram();
+  // Check that we have a phase that reaches up to T_high
+  if (PhasesList.at(0).T_high < T_high)
+  {
+    Logger::Write(LoggingLevel::MinTracerDetailed,
+                  "No traceable global-minimum phase found at Thigh. Abort.");
+    status_vacuum = StatusTracing::NoMinsAtBoundaries;
+    return;
+  }
+  // Global minimum at Thigh at position 0 of PhasesList
+  for (auto phase = PhasesList.begin(); phase != PhasesList.end(); ++phase)
+    if (phase->T_high == T_high)
+      if (phase->Get(T_high).potential <
+          PhasesList.begin()->Get(T_high).potential)
+        std::iter_swap(PhasesList.begin(), phase);
+}
 
-  return;
+void Vacuum::orderPhases()
+{
+  // sort phases in decending T_high
+  std::sort(PhasesList.begin(),
+            PhasesList.end(),
+            [](auto a, auto b) { return a.T_high > b.T_high; });
+
+  // assign ids to phases
+  for (std::size_t i = 0; i < PhasesList.size(); i++)
+  {
+    PhasesList[i].id = i;
+  }
+
+  // identify coexisiting phase regions
+  setCoexRegion(UseMultiStepPTMode); // can flip status_vacuum to error code
+
+  if ((status_coex_pairs == StatusCoexPair::Success) and (not do_only_tracing))
+  {
+    // identify coexisting phase pairs
+    setCoexPhases();
+  }
 }
 
 void Vacuum::MultiStepPTTracer(const double &Temp, const double &deltaT)
@@ -2598,7 +2620,7 @@ void Vacuum::setCoexRegion(const MultiStepPTMode &MultiStepPTMode)
                 "Total number of phases identified: " +
                     std::to_string(PhasesList.size()));
 
-  if (PhasesList.size() == 0) return; // no phase found
+  if (PhasesList.empty()) return; // no phase found
 
   // create edge list
   for (auto i : PhasesList)
@@ -2689,7 +2711,7 @@ void Vacuum::setCoexRegion(const MultiStepPTMode &MultiStepPTMode)
               2) // more than just endpoints found
           {
             status_vacuum = StatusTracing::Success;
-            orderPhases();
+            EnsureHighTemperatureGlobalMininum();
           }
         }
       }
@@ -2802,29 +2824,6 @@ void Vacuum::addPhase(Phase &phase)
   phase.MinimumPhaseVector.back().EdgeOfPhase = 1;
   PhasesList.push_back(phase);
   return;
-}
-
-void Vacuum::orderPhases()
-{
-  // sort phases in decending T_high
-  std::sort(PhasesList.begin(),
-            PhasesList.end(),
-            [](auto a, auto b) { return a.T_high > b.T_high; });
-
-  // assign ids to phases
-  for (std::size_t i = 0; i < PhasesList.size(); i++)
-  {
-    PhasesList[i].id = i;
-  }
-
-  // identify coexisiting phase regions
-  setCoexRegion(UseMultiStepPTMode); // can flip status_vacuum to error code
-
-  if ((status_coex_pairs == StatusCoexPair::Success) and (not do_only_tracing))
-  {
-    // identify coexisting phase pairs
-    setCoexPhases();
-  }
 }
 
 int Vacuum::MinimumFoundAlready(const Minimum &minimum)
