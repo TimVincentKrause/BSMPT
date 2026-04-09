@@ -177,11 +177,12 @@ try
       LegendMinima.push_back("status_nlo_stability");
       LegendMinima.push_back("status_ewsr");
       LegendMinima.push_back("status_tracing");
+      LegendMinima.push_back("Tcrit");
 
       LegendMinima.push_back("Temp");
 
 
-      std::size_t NHiggs = modelPointer->get_NHiggs();
+      //std::size_t NHiggs = modelPointer->get_NHiggs();
 
       for (std::size_t j = 0; j < modelPointer->get_nVEV(); j++)
         LegendMinima.push_back(modelPointer->addLegendVEV().at(j));
@@ -311,6 +312,7 @@ try
         outfile << sep << status_nlostable;
         outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
+        outfile << sep << Tcrit;
         outfile << sep << T;
 
         std::vector<double> vev;
@@ -324,7 +326,7 @@ try
           vev = vac.PhasesList.at(0).Get(T).point;
         }
 
-        std::cout << "T = " << T << std::endl;
+        //std::cout << "T = " << T << std::endl;
 
         std::vector<double> minordervev = modelPointer->MinimizeOrderVEV(vev);
 
@@ -334,7 +336,7 @@ try
             if (minordervev.at(k) < vev_eps)
                 minordervev[k] = 0;
         }
-        std::cout << "v = " << minordervev << std::endl;
+        //std::cout << "v = " << minordervev << std::endl;
 
         outfile << sep << vev;
 
@@ -378,14 +380,14 @@ try
                 << modelPointer->get_HiggsRotNeutralCPintheDark();
 
 
-        MatrixXd MassHiggs(3, 3);
-        for (std::size_t i = 0; i < 3; i++)
-        {
-            for (std::size_t j = 0; j < 3; j++)
-            {
-                MassHiggs(i,j) = modelPointer->get_HiggsRotNeutralCPintheDark()[i][j];
-            }
-        }
+        // MatrixXd MassHiggs(3, 3);
+        // for (std::size_t i = 0; i < 3; i++)
+        // {
+        //     for (std::size_t j = 0; j < 3; j++)
+        //     {
+        //         MassHiggs(i,j) = modelPointer->get_HiggsRotNeutralCPintheDark()[i][j];
+        //     }
+        // }
 
         // std::cout << "HiggsRotNeutralCPintheDark" << std::endl;
         // std::cout << MassHiggs << std::endl;

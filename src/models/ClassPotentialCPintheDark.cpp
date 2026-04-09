@@ -1701,14 +1701,11 @@ void Class_Potential_CPintheDark::AdjustRotationMatrix(
     HiggsRot.row(pos_h1) *= -1;
   }
 
-  std::cout << "Higgsrot_b (h3,rhoS) = " << HiggsRot(pos_h3, pos_rhoS) << std::endl;
   // h3 rhoS (condition (2) above, R33 < 0)
   if (HiggsRot(pos_h3, pos_rhoS) < 0)
   {
     // if negative, flip sign of h3
-    std::cout << "-" << std::endl;
     HiggsRot.row(pos_h3) *= -1;
-    std::cout << "Higgsrot_a (h3,rhoS) = " << HiggsRot(pos_h3, pos_rhoS) << std::endl;
   }
 
   // Calculate the determinant AFTER flipping the signs for rows 1 and 3 above
@@ -1732,9 +1729,6 @@ void Class_Potential_CPintheDark::AdjustRotationMatrix(
     HiggsRot.row(pos_h2) *= -1;
     HiggsRotNeutral.row(1) *= -1;
   }
-
-  std::cout << "HiggsRotNeutral" << std::endl;
-  std::cout << HiggsRotNeutral << std::endl;
 
   HiggsRotNeutralCPintheDark.resize(3);
   for (std::size_t i = 0; i < 3; i++)
