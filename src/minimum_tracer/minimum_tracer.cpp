@@ -521,7 +521,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
   double currentT = currentT_In;
   double dT       = dT_In;
   double initialdT;
-  double eps = 0.1;
+  double eps = 1.;
   double LengthGradient, PotentialDifference, Distance;
   std::function<std::vector<double>(std::vector<double>)> dV;
   std::function<std::vector<std::vector<double>>(std::vector<double>)> Hessian;
@@ -610,7 +610,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
          << " | |dphi/dT| = " << abs(Distance / dT)
          << " | deltaV = " << PotentialDifference
          << " | SEV = " << SmallestEigenvalue(new_point, Hessian)
-         << " | <-\033[0m\n";
+         << " | " << point << "\t" << new_point << "<-\033[0m\n";
 
       if (initialT == currentT)
       {

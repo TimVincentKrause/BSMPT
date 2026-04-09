@@ -314,7 +314,7 @@ public:
    * @brief Threshold for the acceptable gradient
    *
    */
-  double GradientThreshold = 1e-3;
+  double GradientThreshold = 1e-2;
 
   /**
    * @brief Add a constant to the diagonals of the hessian matrix in the
