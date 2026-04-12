@@ -221,9 +221,9 @@ try
         LegendMinima.push_back("mG_" + to_string(j) + "sq_T");
 
       // Angles for Rotation Matrix
-      LegendMinima.push_back("alpha1_T");
-      LegendMinima.push_back("alpha2_T");
-      LegendMinima.push_back("alpha3_T");
+      //LegendMinima.push_back("alpha1_T");
+      //LegendMinima.push_back("alpha2_T");
+      //LegendMinima.push_back("alpha3_T");
 
       // Rotation Matrix for simplicity
       for (std::size_t j = 0; j < 3; j++)
@@ -235,9 +235,9 @@ try
       }
 
       // Angles for PotRotation Matrix
-      LegendMinima.push_back("alpha1_pot_T");
-      LegendMinima.push_back("alpha2_pot_T");
-      LegendMinima.push_back("alpha3_pot_T");
+      //LegendMinima.push_back("alpha1_pot_T");
+      //LegendMinima.push_back("alpha2_pot_T");
+      //LegendMinima.push_back("alpha3_pot_T");
 
       // Rotation Matrix for simplicity
       for (std::size_t j = 0; j < 3; j++)
