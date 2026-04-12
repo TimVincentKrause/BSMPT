@@ -39,7 +39,7 @@ struct CLIOptions
   BSMPT::ModelID::ModelIDs Model{ModelID::ModelIDs::NotSet};
   int line{0}, npoints{100};
   std::string inputfile, outputfile;
-  double templow{0}, temphigh{300};
+  double templow{0}, temphigh{300}, outtemphigh{300};
   bool UseGSL{Minimizer::UseGSLDefault};
   bool UseCMAES{Minimizer::UseLibCMAESDefault};
   bool UseNLopt{Minimizer::UseNLoptDefault};
@@ -296,7 +296,7 @@ try
       std::vector<double> T_list;
       for (int n = 0; n < args.npoints; n++)
         T_list.push_back(args.templow +
-                         n * (args.temphigh - args.templow) / args.npoints);
+                         n * (args.outtemphigh - args.templow) / args.npoints);
 
       T_list.insert(std::lower_bound(T_list.begin(),
                                      T_list.end(),
@@ -487,6 +487,12 @@ bool CLIOptions::good() const
                   "Invalid temperature choice. Thigh has to be > 0 GeV.");
     return false;
   }
+  if (templow >= outtemphigh)
+  {
+    Logger::Write(LoggingLevel::Default,
+                  "Invalid temperature choice. OutThigh has to be > 0 GeV.");
+    return false;
+  }
   if (npoints <= 0)
   {
     Logger::Write(LoggingLevel::Default,
@@ -527,6 +533,15 @@ CLIOptions::CLIOptions(const BSMPT::parser &argparser)
   catch (BSMPT::parserException &)
   {
     ss << "--thigh not set, using default value: " << temphigh << "\n";
+  }
+
+  try
+  {
+    outtemphigh = argparser.get_value<double>("outthigh");
+  }
+  catch (BSMPT::parserException &)
+  {
+    ss << "--outthigh not set, using default value: " << outtemphigh << "\n";
   }
 
   try
@@ -657,6 +672,7 @@ BSMPT::parser prepare_parser()
   argparser.add_subtext("(expects line 1 to be a legend)");
   argparser.add_argument("npoints", "number temperature points", "100", false);
   argparser.add_argument("thigh", "high temperature [GeV]", "300", false);
+  argparser.add_argument("outthigh", "output high temperature [GeV]", "300", false);
   argparser.add_argument(
       "multistepmode", "multi-step PT mode", "default", false);
   argparser.add_subtext("default: default mode");
