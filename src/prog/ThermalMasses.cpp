@@ -373,8 +373,8 @@ try
                 << modelPointer->GaugeMassesSquared(
                         minordervev, T);
 
-        outfile << sep
-                << modelPointer->get_alphas();
+        // outfile << sep
+        //         << modelPointer->get_alphas();
 
         outfile << sep
                 << modelPointer->get_HiggsRotNeutralCPintheDark();
@@ -397,8 +397,8 @@ try
         modelPointer->AdjustPotentialRotationMatrix(minordervev, T);
         Higgs_pos = modelPointer->get_HiggsSectorPositions();
 
-        outfile << sep
-                << modelPointer->get_alphas();
+        // outfile << sep
+        //         << modelPointer->get_alphas();
 
         outfile << sep
                 << modelPointer->get_HiggsRotNeutralCPintheDark();
