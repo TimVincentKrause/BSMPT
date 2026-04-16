@@ -274,18 +274,14 @@ try
         outfile << std::endl;
       }
 
-      std::cout << "T_list" << std::endl;
+
       std::vector<double> T_list;
 
-      std::cout << "npoints=" << args.npoints << std::endl;
-      std::cout << "thigh=" << args.temphigh << std::endl;
-      std::cout << "tlow=" << args.templow << std::endl;
       for (int n = 0; n < args.npoints; n++)
         T_list.push_back(args.templow +
                          n * (args.temphigh - args.templow) / args.npoints);
-      std::cout << "do T_list" << std::endl;
 
-      std::cout << "tcrit=" << vac.CoexPhasesList.at(0).crit_temp << std::endl;
+      // std::cout << "tcrit=" << vac.CoexPhasesList.at(0).crit_temp << std::endl;
       double Tcrit = vac.CoexPhasesList.at(0).crit_temp;
       if (vac.PhasesList.size() == 2)
       {
@@ -295,7 +291,6 @@ try
                       vac.CoexPhasesList.at(0).crit_temp);
       }
 
-      std::cout << "start T_list for loop" << std::endl;
 
 
       // these are needed later for correct rotation matrix after symmetry breaking
@@ -382,10 +377,10 @@ try
         NeutralDSMatrix(2, 2) = HiggsMassMatrix(8, 8);
 
 
-        std::cout << "T = " << T << std::endl;
-        std::cout << "v = " << vev << std::endl;
-        std::cout << "HiggsMassMatrix"<< std::endl;
-        std::cout << NeutralDSMatrix << std::endl;
+        // std::cout << "T = " << T << std::endl;
+        // std::cout << "v = " << vev << std::endl;
+        // std::cout << "HiggsMassMatrix"<< std::endl;
+        // std::cout << NeutralDSMatrix << std::endl;
 
         //outfile << sep << NeutralDSMatrix;
 
@@ -455,8 +450,8 @@ try
             }
         }
 
-        std::cout << "NeutralDSMatrix - Hess"<< std::endl;
-        std::cout << NeutralDSMatrix << std::endl;
+        // std::cout << "NeutralDSMatrix - Hess"<< std::endl;
+        // std::cout << NeutralDSMatrix << std::endl;
 
         std::vector<double> MassSquaredHiggs(modelPointer->get_NHiggs());
         MatrixXd HiggsRot(3,3);
@@ -565,7 +560,7 @@ try
                     rotsgn.at(0) = std::copysign(1.,HiggsRot(1,1));
                     rotsgn.at(1) = std::copysign(1.,HiggsRot(2,0));
                 }
-                else {std::cout << "dH could not be determined" << std::endl;}
+                //else {std::cout << "dH could not be determined" << std::endl;}
             }
             else
             {
@@ -582,7 +577,7 @@ try
                     rotsgn.at(0) = std::copysign(1.,HiggsRot(0,1));
                     rotsgn.at(1) = std::copysign(1.,HiggsRot(1,0));
                 }
-                else {std::cout << "dH could not be determined" << std::endl;}
+                //else {std::cout << "dH could not be determined" << std::endl;}
             }
 
 
@@ -694,8 +689,8 @@ try
         // before phase transition it should be eiter in (2,2) pos
         // or in upper right (0,2)
 
-        std::cout << "HiggsRot" << std::endl;
-        std::cout << HiggsRot << std::endl;
+        // std::cout << "HiggsRot" << std::endl;
+        // std::cout << HiggsRot << std::endl;
 
         outfile << sep
                 << MassSquaredHiggs[i_mG0];
