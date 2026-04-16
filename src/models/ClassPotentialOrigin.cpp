@@ -1895,7 +1895,7 @@ void Class_Potential_Origin::CalculatePhysicalCouplings(const std::vector<double
     }
   }
 
-  CalcCouplingsdone = true;
+  CalcCouplingsDone = true;
 
   return;
 }

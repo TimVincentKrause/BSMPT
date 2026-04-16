@@ -180,6 +180,7 @@ try
       LegendMinima.push_back("status_nlo_stability");
       LegendMinima.push_back("status_ewsr");
       LegendMinima.push_back("status_tracing");
+      LegendMinima.push_back("Tcrit");
 
 
       LegendMinima.push_back("Temp");
@@ -202,31 +203,31 @@ try
       // v and T dependent masses
       for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
         LegendMinima.push_back("mG_" + to_string(j) + "sq_T");
-      
-      for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++){
-        for (std::size_t k = 0; k < modelPointer->get_NHiggs(); k++)
+
+      for (std::size_t j = 0; j < 3; j++){
+        for (std::size_t k = 0; k < 3; k++)
           LegendMinima.push_back("MS_" + to_string(j) + to_string(k));
       }
       // Hessian diagonals
-      for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++){
-        for (std::size_t k = 0; k < modelPointer->get_NHiggs(); k++)
-          LegendMinima.push_back("VeffHess_" + to_string(j)+ to_string(k));
-      }
-      // Rotation Matrix before checking of convention
       for (std::size_t j = 0; j < 3; j++){
         for (std::size_t k = 0; k < 3; k++)
-          LegendMinima.push_back("Rbf" + to_string(j) + to_string(k));
+          LegendMinima.push_back("VeffHess_" + to_string(j)+ to_string(k));
       }
+      // // Rotation Matrix before checking of convention
+      // for (std::size_t j = 0; j < 3; j++){
+      //   for (std::size_t k = 0; k < 3; k++)
+      //     LegendMinima.push_back("Rbf" + to_string(j) + to_string(k));
+      // }
       // potential masses
-      LegendMinima.push_back("m_pot_GWpsq");
-      LegendMinima.push_back("m_pot_GWmsq");
-      LegendMinima.push_back("m_pot_GZsq");
+      LegendMinima.push_back("m_pot_G0sq");
+      LegendMinima.push_back("m_pot_Gmsq");
+      LegendMinima.push_back("m_pot_Gpsq");
       LegendMinima.push_back("m_pot_Hsmsq");
       LegendMinima.push_back("m_pot_H1sq");
       LegendMinima.push_back("m_pot_H2sq");
       LegendMinima.push_back("m_pot_H3sq");
-      LegendMinima.push_back("m_pot_Hpsq");
       LegendMinima.push_back("m_pot_Hmsq");
+      LegendMinima.push_back("m_pot_Hpsq");
 
       // DM-Rotation matrix (this is only for CPintheDark)
       for (std::size_t j = 0; j < 3; j++){
@@ -234,11 +235,11 @@ try
           LegendMinima.push_back("R" + to_string(j) + to_string(k) + "_T");
       }
 
-      // angles
-      LegendMinima.push_back("a1_T");
-      LegendMinima.push_back("a2_T");
-      LegendMinima.push_back("a3_T");
-      
+      // // angles
+      // LegendMinima.push_back("a1_T");
+      // LegendMinima.push_back("a2_T");
+      // LegendMinima.push_back("a3_T");
+
       LegendMinima.push_back("runtime");
       outfile << linestr_store << sep << modelPointer->addLegendCT() << sep
               << LegendMinima << std::endl;
@@ -285,6 +286,7 @@ try
       std::cout << "do T_list" << std::endl;
 
       std::cout << "tcrit=" << vac.CoexPhasesList.at(0).crit_temp << std::endl;
+      double Tcrit = vac.CoexPhasesList.at(0).crit_temp;
       if (vac.PhasesList.size() == 2)
       {
         T_list.insert(std::lower_bound(T_list.begin(),
@@ -294,6 +296,20 @@ try
       }
 
       std::cout << "start T_list for loop" << std::endl;
+
+
+      // these are needed later for correct rotation matrix after symmetry breaking
+
+      double m22sq = modelPointer->Get_Curvature_Higgs_L2().at(7).at(7);
+      double mSsq = modelPointer->Get_Curvature_Higgs_L2().at(8).at(8);
+
+
+      // used for smoothness of rotation matrix
+      // difference
+      bool diagm22sq;
+      // save sign of rotation matrix in relevant elements
+      std::vector<double> rotsgn = {0,0,0};
+
       // for every temperature:
       for (const auto T : T_list)
       {
@@ -303,9 +319,11 @@ try
         outfile << sep << status_nlostable;
         outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
+        outfile << sep << Tcrit;
         outfile << sep << T;
 
         std::vector<double> vev;
+
 
 
         if (vac.PhasesList.size() == 2)
@@ -344,190 +362,359 @@ try
                 << modelPointer->GaugeMassesSquared(
                        modelPointer->MinimizeOrderVEV(vev), T);
 
-        // output HiggsMassMAtrix;
-        for (std::size_t k = 0; k < pow(modelPointer->get_NHiggs(),2);k++){ 
-          outfile << sep
-                  << modelPointer->HiggsMassMatrix(
-                          modelPointer->MinimizeOrderVEV(vev), T,0)(k);
+
+        MatrixXd HiggsMassMatrix = modelPointer->HiggsMassMatrix(modelPointer->MinimizeOrderVEV(vev), T,0);
+
+        // only need neutral DSector part;
+        // basis = {rho1, eta1, rho2, eta2, zeta1, psi1, zeta2, psi2, rhoS}
+        // the rotation matrix is diagonal besides for the neutral dark scalars
+        MatrixXd NeutralDSMatrix(3, 3);
+        NeutralDSMatrix(0, 0) = HiggsMassMatrix(6, 6);
+        NeutralDSMatrix(0, 1) = HiggsMassMatrix(6, 7);
+        NeutralDSMatrix(0, 2) = HiggsMassMatrix(6, 8);
+
+        NeutralDSMatrix(1, 0) = HiggsMassMatrix(7, 6);
+        NeutralDSMatrix(1, 1) = HiggsMassMatrix(7, 7);
+        NeutralDSMatrix(1, 2) = HiggsMassMatrix(7, 8);
+
+        NeutralDSMatrix(2, 0) = HiggsMassMatrix(8, 6);
+        NeutralDSMatrix(2, 1) = HiggsMassMatrix(8, 7);
+        NeutralDSMatrix(2, 2) = HiggsMassMatrix(8, 8);
+
+
+        std::cout << "T = " << T << std::endl;
+        std::cout << "v = " << vev << std::endl;
+        std::cout << "HiggsMassMatrix"<< std::endl;
+        std::cout << NeutralDSMatrix << std::endl;
+
+        //outfile << sep << NeutralDSMatrix;
+
+        for (std::size_t j = 0; j < 3; j++){
+          for (std::size_t k = 0; k < 3; k++)
+              outfile << sep << NeutralDSMatrix(j,k);
         }
         /* --- */
 
-        // calculate the Hessian of the potential
-        std::vector<std::vector<double>> Hessian;
-        double eps = 0.1;
+        double eps = 10;
 
-        // Define effective potential
+        // calculate the Hessian of the potential
+        std::vector<double> diagHess;
+        double rev, imv;
+
         std::function<double(std::vector<double>)> Veff;
         Veff = [&](std::vector<double> effvev)
         {
           // Potential wrapper
-          return modelPointer->VEff(effvev, T);
+          return modelPointer->VEff(effvev,T,0);
         };
 
-        Hessian = HessianNumerical(modelPointer->MinimizeOrderVEV(vev),Veff, eps);
+        for (std::size_t i = 0; i < modelPointer->get_NHiggs();i++)
+        {
+            // Define effective potential
+            std::function<double(std::vector<double>)> dVeff;
+            dVeff = [&](std::vector<double> effvev)
+            {
+              // Potential wrapper
+              return NablaNumerical(effvev,Veff,eps).at(i);
+            };
 
-        outfile << sep
-                << Hessian;
-
-              
-                
-        // Calculation of eigenvalues
+            diagHess.push_back(NablaNumerical(modelPointer->MinimizeOrderVEV(vev),dVeff, eps).at(i));
+            if (i == 6)
+                rev = NablaNumerical(modelPointer->MinimizeOrderVEV(vev),dVeff, eps).at(8);
+            else if (i == 7)
+                imv = NablaNumerical(modelPointer->MinimizeOrderVEV(vev),dVeff, eps).at(8);
+        }
 
         MatrixXd eigenhess(modelPointer->get_NHiggs(),modelPointer->get_NHiggs());
 
-        // Conversion from vector to MatrixXd
+        // set every element to 0 except dagonal + dark sector
         for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++){
           for (std::size_t k = 0; k < modelPointer->get_NHiggs(); k++)
-            if (std::abs(eigenhess(j, k)) < std::pow(10, -3)) {eigenhess(j, k) = 0;}
-            else {eigenhess(j,k) = Hessian[j][k];}
+          {
+            eigenhess(j,k) = 0;
+            if (j == k)
+            {
+                eigenhess(j,k) = diagHess.at(j);
+            }
+          }
         }
-
-        Eigen::SelfAdjointEigenSolver<MatrixXd> es(eigenhess, Eigen::EigenvaluesOnly);
-
-        // eigenvalues
-        std::vector<double> MassSquaredHiggs(modelPointer->get_NHiggs());
-        for (std::size_t i = 0; i < modelPointer->get_NHiggs(); i++)
-        {
-          MassSquaredHiggs[i] = es.eigenvalues()[i];
-          if (std::abs(MassSquaredHiggs[i]) < 1e-5) MassSquaredHiggs[i] = 0;
-        }
-
-        // calculation of order of Higgs particles
-        double tmpmass = MassSquaredHiggs[5];
-
-        size_t i_mHp = 6;
-        size_t i_mH2, i_mH3;
-
-        while (i_mHp<8){
-          if (tmpmass == MassSquaredHiggs[i_mHp]) {break;}
-          else {tmpmass = MassSquaredHiggs[i_mHp];}
-          i_mHp++;
-        }
-
-        if      (i_mHp==6){i_mH2 = 7; i_mH3 = 8;}
-        else if (i_mHp==7){i_mH2 = 5; i_mH3 = 8;}
-        else if (i_mHp==8){i_mH2 = 5; i_mH3 = 6;}
-
-        // Calculation of DM - Rotation matrix (CPintheDark)
-        MatrixXd dmmatrix(3,3);
-        for (std::size_t j = 0; j < 3; j++){
-          for (std::size_t k = 0; k < 3; k++)
-            if (std::abs(Hessian[6+j][6+k]) < std::pow(10, -2)) {dmmatrix(j, k) = 0;}
-            else {dmmatrix(j,k) = Hessian[6+j][6+k];}
-        }
-
-        // CPintheDark-specific:
-        // if the DM mass matrix is nearly diagonal, m[0][0] = m[1][1].
-        // but because they are numerically calculated one can be bigger than the other
-        // this can lead to jumps in the mass matrices.
-        // -> here put the smallest value always in the first entry
-
-        if ((std::abs(dmmatrix(1,1) - dmmatrix(0,0))) < 1e-3 and (dmmatrix(0,0) < dmmatrix(1,1)))
-        {
-          double tmpval = dmmatrix(1,1);
-          dmmatrix(1,1) = dmmatrix(0,0);
-          dmmatrix(0,0) = tmpval;
-        }
-
-        Eigen::SelfAdjointEigenSolver<MatrixXd> esdm(dmmatrix);
-        MatrixXd HiggsRot = esdm.eigenvectors().transpose();
+        // if (T < Tcrit)
+        // {
+        eigenhess(6, 8) = rev;
+        eigenhess(7, 8) = imv;
+        eigenhess(8, 6) = rev;
+        eigenhess(8, 7) = imv;
+        // }
 
         for (std::size_t i = 0; i < 3; i++)
         {
-          for (std::size_t j = 0; j < 3; j++)
-          {
-            if (std::abs(HiggsRot(i, j)) < std::pow(10, -7)) {HiggsRot(i, j) = 0;}
-          }
+            for (std::size_t j = 0; j < 3; j++)
+            {
+                NeutralDSMatrix(i,j) = eigenhess(6+i, 6+j);
+                outfile << sep << NeutralDSMatrix(i,j);
+            }
+        }
+
+        std::cout << "NeutralDSMatrix - Hess"<< std::endl;
+        std::cout << NeutralDSMatrix << std::endl;
+
+        std::vector<double> MassSquaredHiggs(modelPointer->get_NHiggs());
+        MatrixXd HiggsRot(3,3);
+        std::size_t i_mG0, i_mGm, i_mGp, i_mHsm, i_mH1, i_mH2, i_mH3, i_mHm, i_mHp;
+
+        if (T < Tcrit)
+        {
+            Eigen::SelfAdjointEigenSolver<MatrixXd> es(eigenhess, Eigen::EigenvaluesOnly);
+
+            // eigenvalues
+            for (std::size_t i = 0; i < modelPointer->get_NHiggs(); i++)
+            {
+            MassSquaredHiggs[i] = es.eigenvalues()[i];
+            if (std::abs(MassSquaredHiggs[i]) < 1e-5) MassSquaredHiggs[i] = 0;
+            }
+
+
+            i_mG0 = 0; i_mGm = 1; i_mGp = 2;
+            i_mHsm = 3; i_mH1 = 4;
+
+            // calculation of order of Higgs particles
+            double tmpmass = MassSquaredHiggs[5];
+
+            i_mHp = 6;
+
+            while (i_mHp<8){
+            if (tmpmass == MassSquaredHiggs[i_mHp]) {break;}
+            else {tmpmass = MassSquaredHiggs[i_mHp];}
+            i_mHp++;
+            }
+
+            if      (i_mHp==6){i_mH2 = 7; i_mH3 = 8;}
+            else if (i_mHp==7){i_mH2 = 5; i_mH3 = 8;}
+            else if (i_mHp==8){i_mH2 = 5; i_mH3 = 6;}
+
+            i_mHm = i_mHp - 1;
+
+            // CPintheDark-specific:
+            // if the DM mass matrix is nearly diagonal, m[0][0] = m[1][1].
+            // but because they are numerically calculated one can be bigger than the other
+            // this can lead to jumps in the mass matrices.
+            // -> here put the smallest value always in the first entry
+
+            Eigen::SelfAdjointEigenSolver<MatrixXd> esdm(NeutralDSMatrix);
+            HiggsRot = esdm.eigenvectors().transpose();
+
+            for (std::size_t i = 0; i < 3; i++)
+            {
+            for (std::size_t j = 0; j < 3; j++)
+            {
+                if (std::abs(HiggsRot(i, j)) < std::pow(10, -7)) {HiggsRot(i, j) = 0;}
+            }
+            }
+
+
+            // for (std::size_t j = 0; j < 3; j++){
+            //   for (std::size_t k = 0; k < 3; k++){
+            //   outfile << sep
+            //           << HiggsRot(j,k) ;}
+            // }
+
+
+            // Set correct parametrisation
+            if (HiggsRot(0,0) < 0)
+            {HiggsRot.row(0) *= -1;}
+            if (HiggsRot(2,2) < 0)
+            {HiggsRot.row(2) *= -1;}
+            if (HiggsRot.determinant() < 0)
+            {HiggsRot.row(1) *= -1;}
+
+            // Angle Calculation
+
+            // double s2 = HiggsRot(0,2);
+            // double s1, s3;
+
+            // // if s2 == 1, the matrix reduces to
+            // // 2 d.o.f so we choose the following
+            // // parametrisation:
+            // if (s2 == 1)
+            // {
+            // s1 = 1; s3=1;
+            // }
+            // else
+            // {
+            // s1 = HiggsRot(0,1) / (std::sqrt(1 - s2*s2));
+            // s3 = HiggsRot(1,2) / (std::sqrt(1 - s2*s2));
+            // }
+
+            // double a1 = std::asin(s1);
+            // double a2 = std::asin(s2);
+            // double a3 = std::asin(s3);
+
+            double roteps = 1e-2;
+            if (mSsq < m22sq)
+            {
+                rotsgn.at(2) = std::copysign(1.,HiggsRot(0,2));
+                if ( std::abs(HiggsRot(1,0)) -1 < roteps )
+                {
+                    diagm22sq = 1;
+                    rotsgn.at(0) = std::copysign(1.,HiggsRot(1,0));
+                    rotsgn.at(1) = std::copysign(1.,HiggsRot(2,1));
+                }
+                else if ( std::abs(HiggsRot(1,1)) -1 < roteps )
+                {
+                    diagm22sq = 0;
+                    rotsgn.at(0) = std::copysign(1.,HiggsRot(1,1));
+                    rotsgn.at(1) = std::copysign(1.,HiggsRot(2,0));
+                }
+                else {std::cout << "dH could not be determined" << std::endl;}
+            }
+            else
+            {
+                rotsgn.at(2) = std::copysign(1.,HiggsRot(2,2));
+                if ( std::abs(HiggsRot(0,0)) -1 < roteps )
+                {
+                    diagm22sq = 1;
+                    rotsgn.at(0) = std::copysign(1.,HiggsRot(0,0));
+                    rotsgn.at(1) = std::copysign(1.,HiggsRot(1,1));
+                }
+                else if ( std::abs(HiggsRot(0,1)) -1 < roteps )
+                {
+                    diagm22sq = 0;
+                    rotsgn.at(0) = std::copysign(1.,HiggsRot(0,1));
+                    rotsgn.at(1) = std::copysign(1.,HiggsRot(1,0));
+                }
+                else {std::cout << "dH could not be determined" << std::endl;}
+            }
+
+
+
+        }
+        else
+        {
+            for (std::size_t i = 0; i <modelPointer->get_NHiggs(); i++)
+            {
+                MassSquaredHiggs.at(i) = eigenhess(i,i);
+
+            }
+
+            // probably nicer way to sort this, but Im too tired right now
+            // Goldsontes t 0,1,5
+            if ((MassSquaredHiggs.at(0) < MassSquaredHiggs.at(1)) and (MassSquaredHiggs.at(0) < MassSquaredHiggs.at(5)))
+            {
+                i_mG0 = 0;
+                if (MassSquaredHiggs.at(1) < MassSquaredHiggs.at(5))
+                    {i_mGm = 1; i_mGp = 5;}
+                else
+                    {i_mGm = 5; i_mGp = 1;}
+            }
+            else if ((MassSquaredHiggs.at(1) < MassSquaredHiggs.at(0)) and (MassSquaredHiggs.at(1) < MassSquaredHiggs.at(5)))
+            {
+                i_mG0 = 1;
+                if (MassSquaredHiggs.at(0) < MassSquaredHiggs.at(5))
+                    {i_mGm = 0; i_mGp = 5;}
+                else
+                    {i_mGm = 5; i_mGp = 0;}
+            }
+            else if ((MassSquaredHiggs.at(5) < MassSquaredHiggs.at(0)) and (MassSquaredHiggs.at(5) < MassSquaredHiggs.at(1)))
+            {
+                i_mG0 = 5;
+                if (MassSquaredHiggs.at(1) < MassSquaredHiggs.at(0))
+                    {i_mGm = 1; i_mGp = 0;}
+                else
+                    {i_mGm = 0; i_mGp = 1;}
+            }
+
+            i_mHm = 2; i_mHp = 3;
+            i_mHsm = 4;
+
+            // rotation matrix with smooth swith;
+            if (mSsq < m22sq)
+            {
+                if (diagm22sq)
+                {
+                    // HiggsRot = {{0,0,1},{-1,0,0},{0,1,0}};
+                    HiggsRot(0,0) = 0;HiggsRot(0,1) = 0;HiggsRot(0,2) = rotsgn.at(2);
+                    HiggsRot(1,0) = rotsgn.at(0);HiggsRot(1,1) = 0;HiggsRot(1,2) = 0;
+                    HiggsRot(2,0) = 0;HiggsRot(2,1) = rotsgn.at(1);HiggsRot(2,2) = 0;
+                    i_mH1 = 8; i_mH2 = 6; i_mH3 = 7;
+                }
+                else
+                {
+                    // HiggsRot = {{0,0,1},{0,-1,0},{1,0,0}};
+                    HiggsRot(0,0) = 0;HiggsRot(0,1) = 0;HiggsRot(0,2) = rotsgn.at(2);
+                    HiggsRot(1,0) = 0;HiggsRot(1,1) = rotsgn.at(1);HiggsRot(1,2) = 0;
+                    HiggsRot(2,0) = rotsgn.at(0);HiggsRot(2,1) = 0;HiggsRot(2,2) = 0;
+                    i_mH1 = 8; i_mH2 = 7; i_mH3 = 6;
+                }
+            }
+            else {
+            {
+                if (diagm22sq)
+                {
+                    // HiggsRot = {{1,0,0},{0,1,0},{0,0,1}};
+                    HiggsRot(0,0) = rotsgn.at(0);HiggsRot(0,1) = 0;HiggsRot(0,2) = 0;
+                    HiggsRot(1,0) = 0;HiggsRot(1,1) = rotsgn.at(1);HiggsRot(1,2) = 0;
+                    HiggsRot(2,0) = 0;HiggsRot(2,1) = 0;HiggsRot(2,2) = rotsgn.at(2);
+                    i_mH1 = 6; i_mH2 = 7; i_mH3 = 8;
+                }
+                else
+                {
+                    // HiggsRot = {{0,1,0},{-1,0,0},{0,0,1}};
+                    HiggsRot(0,0) = 0;HiggsRot(0,1) = rotsgn.at(1);HiggsRot(0,2) = 0;
+                    HiggsRot(1,0) = rotsgn.at(0);HiggsRot(1,1) = 0;HiggsRot(1,2) = 0;
+                    HiggsRot(2,0) = 0;HiggsRot(2,1) = 0;HiggsRot(2,2) = rotsgn.at(2);
+                    i_mH1 = 7; i_mH2 = 6; i_mH3 = 8;
+                }
+            }
+            }
         }
 
 
-        for (std::size_t j = 0; j < 3; j++){
-          for (std::size_t k = 0; k < 3; k++){
-          outfile << sep
-                  << HiggsRot(j,k) ;}
-        }
-
-        
-        std::cout << "T = " << T << std::endl;
-
-        std::cout << "DMmatrix" << std::endl;
-        std::cout << dmmatrix << std::endl;
-
-        std::cout << "HiggsRotbef" << std::endl;
-        std::cout << HiggsRot << std::endl;
+        /*
+         *
+         *   Curvature_Higgs_L4[0][0][2][2] = L3 + L4 + L5;
+         Curvature_Higgs_L4[0][0][3][3] = L3 + L4 - L5;
+         *
+         */
 
 
+        // std::cout << "sines" << std::endl;
+        // std::cout << "s1 = " << s1 << std::endl;
+        // std::cout << "s2 = " << s2 << std::endl;
+        // std::cout << "s3 = " << s3 << std::endl;
 
-        std::cout << "HiggsRot(0,0) = " << HiggsRot(0,0) << std::endl;
-        std::cout << "HiggsRot(2,2) = " << HiggsRot(2,2) << std::endl;
-        
-        std::cout << "detR = " << HiggsRot.determinant() << std::endl;
+        // std::cout << "angles" << std::endl;
+        // std::cout << "a1 = " << a1 << std::endl;
+        // std::cout << "a2 = " << a2 << std::endl;
+        // std::cout << "a3 = " << a3 << std::endl;
 
+        // std::cout << "-----" << std::endl;
+        // std::cout << "-----" << std::endl;
 
-
-        // Set correct parametrisation 
-        if (HiggsRot(0,0) < 0)
-        {HiggsRot.row(0) *= -1;}
-        if (HiggsRot(2,2) < 0)
-        {HiggsRot.row(2) *= -1;}
-        if (HiggsRot.determinant() < 0) 
-        {HiggsRot.row(1) *= -1;}
+        // find out where mS is in relation. In last step
+        // before phase transition it should be eiter in (2,2) pos
+        // or in upper right (0,2)
 
         std::cout << "HiggsRot" << std::endl;
         std::cout << HiggsRot << std::endl;
 
-
-        // Angle Calculation
-
-        double s2 = HiggsRot(0,2);
-        double s1, s3;
-
-        // if s2 == 1, the matrix reduces to 
-        // 2 d.o.f so we choose the following
-        // parametrisation:
-        if (s2 == 1)
-        {
-          s1 = 1; s3=1;
-        }
-        else
-        {
-        s1 = HiggsRot(0,1) / (std::sqrt(1 - s2*s2));
-        s3 = HiggsRot(1,2) / (std::sqrt(1 - s2*s2));
-        }
-
-        double a1 = std::asin(s1);
-        double a2 = std::asin(s2);
-        double a3 = std::asin(s3);
-
-        std::cout << "sines" << std::endl;
-        std::cout << "s1 = " << s1 << std::endl;
-        std::cout << "s2 = " << s2 << std::endl;
-        std::cout << "s3 = " << s3 << std::endl;
-
-        std::cout << "angles" << std::endl;
-        std::cout << "a1 = " << a1 << std::endl;
-        std::cout << "a2 = " << a2 << std::endl;
-        std::cout << "a3 = " << a3 << std::endl;
-
-        std::cout << "-----" << std::endl;
-        std::cout << "-----" << std::endl;
-
-        // output
-
-        for (size_t i = 0; i<5;i++){
-          outfile << sep
-                  << MassSquaredHiggs[i];
-
-        }
+        outfile << sep
+                << MassSquaredHiggs[i_mG0];
+        outfile << sep
+                << MassSquaredHiggs[i_mGm];
+        outfile << sep
+                << MassSquaredHiggs[i_mGp];
+        outfile << sep
+                << MassSquaredHiggs[i_mHsm];
+        outfile << sep
+                << MassSquaredHiggs[i_mH1];
         outfile << sep
                 << MassSquaredHiggs[i_mH2];
         outfile << sep
                 << MassSquaredHiggs[i_mH3];
         outfile << sep
-                << MassSquaredHiggs[i_mHp];
+                << MassSquaredHiggs[i_mHm];
         outfile << sep
-                << MassSquaredHiggs[i_mHp-1];
-
+                << MassSquaredHiggs[i_mHp];
 
         for (std::size_t j = 0; j < 3; j++){
           for (std::size_t k = 0; k < 3; k++){
@@ -535,12 +722,12 @@ try
                   << HiggsRot(j,k) ;}
         }
 
-        outfile << sep
-                << a1;
-        outfile << sep
-                << a2;
-        outfile << sep
-                << a3;
+        // outfile << sep
+        //         << a1;
+        // outfile << sep
+        //         << a2;
+        // outfile << sep
+        //         << a3;
 
         auto time = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::high_resolution_clock::now() - start)
@@ -657,7 +844,7 @@ CLIOptions::CLIOptions(const BSMPT::parser &argparser)
   {
     ss << "--thigh not set, using default value: " << temphigh << "\n";
   }
-  
+
   try
   {
     npoints = argparser.get_value<double>("npoints");
