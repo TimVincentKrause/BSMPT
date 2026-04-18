@@ -533,7 +533,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
   double currentT = currentT_In;
   double dT       = dT_In;
   double initialdT;
-  double eps = 1.;
+  double eps = 1.5;//1.;
   double LengthGradient, PotentialDifference, Distance;
   std::function<std::vector<double>(std::vector<double>)> dV;
   std::function<std::vector<std::vector<double>>(std::vector<double>)> Hessian;
@@ -600,7 +600,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
     PotentialDifference = V(new_point) - V(point);
 
     // If the minimum it n GeV away then we consider it a new phase
-    double ThresholdDistance = (double)dim;
+    double ThresholdDistance = 3.0;//(double)dim;
     if (abs(dT) < 1e-5)
     {
       break;
