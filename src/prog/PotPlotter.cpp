@@ -25,6 +25,8 @@
 #include <string>   // for getline, operator<<
 #include <utility>  // for pair
 #include <vector>   // for vector
+#include <BSMPT/utility/NumericalDerivatives.h>
+#include "Eigen/Eigenvalues" //EU!!!
 
 using namespace std;
 using namespace BSMPT;
@@ -124,7 +126,61 @@ try
       for (auto x : modelPointer->addLegendVEV())
         outfile << std::setprecision(16) << x << sep;
 
-      outfile << "Veff(v,T)" << sep << "T" << std::endl;
+      outfile << "Veff(v,T)" << sep
+              << "dVeff(v,T)" << sep
+              << "dRVeff(v,T)" << sep
+              << "err" << sep
+              // << "ddVeff(v,T)" << sep
+              // << "ddRVeff(v,T)" << sep
+              // << "dderr" << sep
+              << "T" << std::endl;
+
+      double v=246.22;
+      // for (double ep=80; ep < 150; ep+=5)
+      // {
+          std::vector<double> vev = {v};
+          std::vector<double> vev_minord = modelPointer->MinimizeOrderVEV(vev);
+
+          std::function<double(std::vector<double>)> Veff_loop;
+          Veff_loop = [&](std::vector<double> effvev)
+              {return modelPointer->VEff(effvev,temp,0);};
+
+          std::vector<double> err(9);
+
+          for (double ep = 0.1; ep< 10; ep+=1)
+          {
+            std::vector<double> eps = {ep,ep,ep,ep,ep,ep,ep,ep,ep};
+            std::vector<double> gradV = NablaRidders(vev_minord,Veff_loop,eps,err);
+            std::vector<double> gradVstd = NablaNumerical(vev_minord,Veff_loop,0.1);
+            std::cout << "--- v="<<v<< "| ep=" << eps << " ---" << std::endl;
+            std::cout << "std:" << std::endl;
+            std::cout << gradVstd << std::endl;
+            std::cout << "imp:" << std::endl;
+            std::cout << gradV << std::endl;
+            std::cout << err << std::endl;
+          }
+          std::vector<double> eps = {100.,100.,100.,100.,100.,100.,100.,100.,100.};
+          std::vector<std::vector<double>> derr(9,
+                                                  std::vector<double>(9));
+          std::vector<std::vector<double>> hessV = HessianNablaRidderso4(vev_minord,Veff_loop,eps,derr);
+          //std::vector<std::vector<double>> hessrib = HessianNablaRidders(modelPointer->MinimizeOrderVEV(vev),Veff_loop,eps);
+
+          Eigen::MatrixXd Hessian(9,9);
+          Eigen::MatrixXd Hessianeps(9,9);
+          for (std::size_t i=0; i<9;i++)
+          {
+              for (std::size_t j=0;j<9;j++)
+              {
+                  Hessian(i,j) = hessV.at(i).at(j);
+                  Hessianeps(i,j) = derr.at(i).at(j);
+              }
+          }
+          std::cout << "--- v="<<v<< "| ep=" << eps.at(0) << " ---" << std::endl;
+          std::cout << Hessian << std::endl;
+          std::cout << "\n";
+          std::cout << Hessianeps << std::endl;
+          //std::cout << Hessian << std::endl;
+          //}
 
       Logger::Write(LoggingLevel::ProgDetailed,
                     "Evaluating slice between start minimum at (" +
@@ -135,11 +191,32 @@ try
 
       auto grid_points =
           Create1DimGrid(args.min_start, args.min_end, args.npoints);
+
+
+      std::function<double(std::vector<double>)> Veff;
+      Veff = [&](std::vector<double> effvev)
+          {return modelPointer->VEff(modelPointer->MinimizeOrderVEV(effvev),temp,0);};
+
+      std::vector<double> eps_nab = {30.};
+      std::vector<double> error(modelPointer->get_NHiggs());
+      std::vector<std::vector<double>> error_d2(modelPointer->get_NHiggs(), std::vector<double>(modelPointer->get_NHiggs()));
       for (auto point : grid_points)
       {
+        std::vector<double> dveff = NablaNumerical(point,Veff,10);
+        std::vector<double> nabrib = NablaRidders(point,Veff,eps_nab,error);
+
+        std::vector<std::vector<double>> hess = HessianNumerical(point,Veff,10);
+        std::vector<std::vector<double>> hessrib = HessianNablaRidderso4(point,Veff,eps_nab,error_d2);
+
         outfile << point << sep
                 << modelPointer->VEff(modelPointer->MinimizeOrderVEV(point),
                                       temp)
+                << sep << dveff
+                << sep << nabrib
+                << sep << error.at(0)
+                // << sep << hess.at(0)
+                // << sep << hessrib.at(0)
+                // << sep << error_d2.at(0)
                 << sep << temp << std::endl;
       }
     }

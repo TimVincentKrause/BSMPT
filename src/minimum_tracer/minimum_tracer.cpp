@@ -533,7 +533,8 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
   double currentT = currentT_In;
   double dT       = dT_In;
   double initialdT;
-  double eps = 1.5;//1.;
+  double eps = 1.5;//60;//1.;
+  //double eps_grad = 20;//1.;
   double LengthGradient, PotentialDifference, Distance;
   std::function<std::vector<double>(std::vector<double>)> dV;
   std::function<std::vector<std::vector<double>>(std::vector<double>)> Hessian;

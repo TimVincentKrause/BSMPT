@@ -122,30 +122,62 @@ try
       std::shared_ptr<MinimumTracer> MinTracer(new MinimumTracer(
           modelPointer, args.WhichMinimizer, args.UseMultithreading));
 
-      // NLO stability check
-      bool nlostable = modelPointer->CheckNLOVEV(
-          MinTracer->ConvertToVEVDim(MinTracer->GetGlobalMinimum(0)));
-      StatusNLOStability status_nlostable =
-          MinTracer->GetStatusNLOVEV(nlostable);
-      Logger::Write(LoggingLevel::ProgDetailed,
-                    "Status of NLO stability check is: " +
-                        StatusNLOStabilityToString.at(status_nlostable));
 
-      // EWSR check
-      double EWSymmetryRestoration_status = 0;
-      StatusEWSR status_ewsr              = StatusEWSR::Off;
 
-      if (args.CheckEWSymmetryRestoration > 0)
+      // take only relevant lines from linestring
+      // linestr_store;  linestr;
+      //
+      std::stringstream linstor(linestr_store);
+      std::stringstream linstr(linestr);
+
+      std::vector<std::string> linstor_vec;
+      std::vector<std::string> linstr_vec;
+
+      std::string tmpstring;
+      while (linstor >> tmpstring){linstor_vec.push_back(tmpstring);}
+      while (linstr >> tmpstring){linstr_vec.push_back(tmpstring);}
+
+      std::string save_head = "";
+      std::string save_numb = "";
+      std::vector<std::string> wanted_header = {"L1","L2","L3","L4","L5","L6","L7","L8","Tr","Ti","m22sq","mssq"};
+      for (std::size_t ij = 0; ij < linstor_vec.size(); ij++)
       {
-        EWSymmetryRestoration_status =
-            MinTracer->IsThereEWSymmetryRestoration();
-        status_ewsr = MinTracer->GetStatusEWSR(EWSymmetryRestoration_status);
+          bool addstring = 0;
+          for (std::size_t ijk =0; ijk < wanted_header.size(); ijk++)
+              addstring += (linstor_vec.at(ij) == wanted_header.at(ijk));
+          if (addstring)
+          {
+              save_head += linstor_vec.at(ij) + "\t";
+              save_numb += linstr_vec.at(ij+1) + "\t"; //bc/ of index
+          }
+
+
       }
-      else
-      {
-        Logger::Write(LoggingLevel::ProgDetailed,
-                      "Check for EW symmetry restoration is disabled.\n");
-      }
+
+      // // NLO stability check
+      // bool nlostable = modelPointer->CheckNLOVEV(
+      //     MinTracer->ConvertToVEVDim(MinTracer->GetGlobalMinimum(0)));
+      // StatusNLOStability status_nlostable =
+      //     MinTracer->GetStatusNLOVEV(nlostable);
+      // Logger::Write(LoggingLevel::ProgDetailed,
+      //               "Status of NLO stability check is: " +
+      //                   StatusNLOStabilityToString.at(status_nlostable));
+
+      // // EWSR check
+      // double EWSymmetryRestoration_status = 0;
+      // StatusEWSR status_ewsr              = StatusEWSR::Off;
+
+      // if (args.CheckEWSymmetryRestoration > 0)
+      // {
+      //   EWSymmetryRestoration_status =
+      //       MinTracer->IsThereEWSymmetryRestoration();
+      //   status_ewsr = MinTracer->GetStatusEWSR(EWSymmetryRestoration_status);
+      // }
+      // else
+      // {
+      //   Logger::Write(LoggingLevel::ProgDetailed,
+      //                 "Check for EW symmetry restoration is disabled.\n");
+      // }
 
       // phase tracking
       Logger::Write(
@@ -177,8 +209,8 @@ try
 
       // prepare legend
       std::vector<std::string> LegendMinima;
-      LegendMinima.push_back("status_nlo_stability");
-      LegendMinima.push_back("status_ewsr");
+      //LegendMinima.push_back("status_nlo_stability");
+      //LegendMinima.push_back("status_ewsr");
       LegendMinima.push_back("status_tracing");
       LegendMinima.push_back("Tcrit");
 
@@ -253,7 +285,7 @@ try
       }
 
       LegendMinima.push_back("runtime");
-      outfile << linestr_store << sep << modelPointer->addLegendCT() << sep
+      outfile << save_head << sep //<< modelPointer->addLegendCT() << sep
               << LegendMinima << std::endl;
 
       std::size_t length = 0;
@@ -272,10 +304,10 @@ try
       if (length == 0)
       {
         outfile << std::setprecision(16);
-        outfile << linestr;
-        outfile << sep << parameters.second;
-        outfile << sep << status_nlostable;
-        outfile << sep << status_ewsr;
+        outfile << save_numb;
+        //outfile << sep << parameters.second;
+        //outfile << sep << status_nlostable;
+        //outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
         auto time = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::high_resolution_clock::now() - start)
@@ -295,6 +327,7 @@ try
 
       // std::cout << "tcrit=" << vac.CoexPhasesList.at(0).crit_temp << std::endl;
       double Tcrit = vac.CoexPhasesList.at(0).crit_temp;
+      std::cout << "Tcrit = " << Tcrit << std::endl;
       if (vac.PhasesList.size() == 2)
       {
         T_list.insert(std::lower_bound(T_list.begin(),
@@ -322,10 +355,10 @@ try
       for (const auto T : T_list)
       {
         outfile << std::setprecision(16);
-        outfile << linestr;
-        outfile << sep << parameters.second;
-        outfile << sep << status_nlostable;
-        outfile << sep << status_ewsr;
+        outfile << save_numb;
+        //outfile << sep << parameters.second;
+        //outfile << sep << status_nlostable;
+        //outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
         outfile << sep << Tcrit;
         outfile << sep << T;
@@ -412,6 +445,20 @@ try
                 Hessian(8,i) = Hessian(i,8);
             }
         }
+
+        // std::vector<std::vector<double>> TestNumdiff = HessianNablaNumerical(modelPointer->MinimizeOrderVEV(vev),Veff,eps);
+
+        // MatrixXd TestMatrix(modelPointer->get_NHiggs(),modelPointer->get_NHiggs());
+        // for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++){
+        //   for (std::size_t k = 0; k < modelPointer->get_NHiggs(); k++) {
+        //       TestMatrix(j,k) = TestNumdiff.at(j).at(k);
+        //   }
+        // }
+
+        // std::cout << "--- T = " << T << " ---" << std::endl;
+        // std::cout << TestMatrix << std::endl;
+
+
 
         for (std::size_t j = 0; j < 3; j++){
           for (std::size_t k = 0; k < 3; k++) {

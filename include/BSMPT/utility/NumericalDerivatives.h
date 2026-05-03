@@ -1,6 +1,8 @@
 #pragma once
 #include <functional>
 #include <vector>
+#include <limits>
+#include <cmath>
 
 namespace BSMPT
 {
@@ -30,6 +32,66 @@ NablaNumerical(const std::vector<double> &phi,
                const std::function<double(std::vector<double>)> &f,
                const double &eps);
 
+double
+FiniteDifference2D(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps, const std::size_t &i, const std::size_t &j);
+
+double
+FiniteDifference2D(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps, const std::size_t &i);
+
+double
+FiniteDifference2Do4(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps, const std::size_t &i, const std::size_t &j);
+
+double
+FiniteDifference2Do4(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps, const std::size_t &i);
+
+std::vector<double>
+NablaRidders(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const std::vector<double> &eps, std::vector<double> &err);
+
+std::vector<double>
+NablaRidders(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps);
+
+std::vector<double>
+NablaRidderso6(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps);
+
+std::vector<std::vector<double>>
+HessianNablaRidders(const std::vector<double> &phi,
+                 const std::function<double(std::vector<double>)> &V,
+                 const std::vector<double> &eps, std::vector<std::vector<double>> &err);
+
+std::vector<std::vector<double>>
+HessianNablaRidderso4(const std::vector<double> &phi,
+                 const std::function<double(std::vector<double>)> &V,
+                 const std::vector<double> &eps, std::vector<std::vector<double>> &err);
+
+std::vector<std::vector<double>>
+HessianNablaRidderso4(const std::vector<double> &phi,
+                 const std::function<double(std::vector<double>)> &V,
+                 const double &eps);
+/*
+std::vector<double>
+NablaRidders(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps);
+
+std::vector<std::vector<double>>
+HessianNablaRidders(const std::vector<double> &phi,
+                 const std::function<double(std::vector<double>)> &V,
+                 const double &eps);
+*/
 /**
  * @brief Numerical method to calculate the potential's (or other functions's)
  * hessian matrix using finite differences method.
@@ -51,6 +113,12 @@ NablaNumerical(const std::vector<double> &phi,
  */
 std::vector<std::vector<double>>
 HessianNumerical(const std::vector<double> &phi,
+                 const std::function<double(std::vector<double>)> &V,
+                 double eps);
+
+
+std::vector<std::vector<double>>
+HessianNablaNumerical(const std::vector<double> &phi,
                  const std::function<double(std::vector<double>)> &V,
                  double eps);
 } // namespace BSMPT
