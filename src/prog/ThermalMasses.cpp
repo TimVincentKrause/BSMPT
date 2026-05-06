@@ -364,6 +364,7 @@ try
         outfile << sep << T;
 
         std::vector<double> vev;
+        if (T < 0) {break;}
 
 
 
