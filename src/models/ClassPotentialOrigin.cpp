@@ -15,14 +15,22 @@
 
 #include <BSMPT/ThermalFunctions/NegativeBosonSpline.h>
 #include <BSMPT/ThermalFunctions/ThermalFunctions.h>
+#include <BSMPT/ThermalFunctions/thermal_table.hpp>
+#include <BSMPT/minimizer/Minimizer.h>
 #include <BSMPT/models/ClassPotentialOrigin.h>
 #include <BSMPT/models/IncludeAllModels.h>
+#include <BSMPT/models/modeltests/ModelTestfunctions.h>
 #include <BSMPT/utility/Logger.h>
 #include <BSMPT/utility/utility.h>
 using namespace Eigen;
 
 namespace BSMPT
 {
+  
+// Initialize static thermal tables
+BSMPT::ThermalFunctions::ThermalFunctionTables Class_Potential_Origin::m_thermalTables;
+bool Class_Potential_Origin::m_thermalTablesInitialized = false;
+
 Class_Potential_Origin::Class_Potential_Origin()
     : Class_Potential_Origin(GetSMConstants())
 {
@@ -105,9 +113,15 @@ double Class_Potential_Origin::FCW(double MassSquared) const
     x = Boarder;
   else if (std::abs(MassSquared) < Boarder)
     x = Boarder;
-  else
-    x = std::abs(MassSquared);
-  res = std::log(x) - 2 * std::log(scale);
+  else{
+    //EU!!!
+    //x = std::abs(MassSquared);
+    //res = std::log(x) - 2 * std::log(scale);
+    long double safe_scale = std::abs(static_cast<long double>(scale));
+    long double safe_m2 = std::abs(static_cast<long double>(MassSquared));
+    long double ratio = safe_m2 / (safe_scale * safe_scale);
+    res = std::log(ratio);
+  }
   return res;
 }
 
@@ -134,18 +148,31 @@ double Class_Potential_Origin::boson(double MassSquared,
                                      int diff) const
 {
   double res = 0;
-  if (diff >= 0) res = CWTerm(std::abs(MassSquared), cb, diff);
+
+  // Initialize thermal tables once
+  if (!m_thermalTablesInitialized) {
+    m_thermalTablesInitialized = true;
+    std::cout << " initialized inside boson : " << m_thermalTablesInitialized;  //debug Rafael
+  }
+
+  if (diff >= 0) {//res = CWTerm(std::abs(MassSquared), cb, diff);
+                  res = CWTerm(MassSquared, cb, diff); //Carlo correction here, old implementation above 
+                  //std::cout << " *************** boson CW term : " << CWTerm(MassSquared, cb, diff);  //debug Carlo
+                }
   if (Temp == 0) return res;
   double Ratio = MassSquared / std::pow(Temp, 2);
-  if (diff == 0)
-  {
-    res += std::pow(Temp, 4) / (2 * std::pow(M_PI, 2)) *
-           ThermalFunctions::JbosonInterpolated(Ratio);
+  
+  if (diff == 0){ 
+    //res += std::pow(Temp, 4) / (2 * std::pow(M_PI, 2)) * ThermalFunctions::JbosonInterpolated(Ratio);
+    res += std::pow(Temp, 4) / (2 * std::pow(M_PI, 2)) * m_thermalTables.JB(Ratio);
   }
-  else if (diff == 1)
-  {
-    res += std::pow(Temp, 2) / (2 * std::pow(M_PI, 2)) *
-           ThermalFunctions::JbosonNumericalIntegration(Ratio, 1);
+  
+  //else if (diff == 1)
+  else if (diff > 0) // Carlo correction
+  { 
+    //res += std::pow(Temp, 2) / (2 * std::pow(M_PI, 2)) * ThermalFunctions::JbosonNumericalIntegration(Ratio, 1);
+    res += std::pow(Temp, 2) / (2 * std::pow(M_PI, 2)) * m_thermalTables.DJB(Ratio);
+    //std::cout << " *** debug Thermal : " << MassSquared << " " << Ratio << " " << ThermalFunctions::JbosonNumericalIntegration(Ratio, 1) << std::endl; 
   }
   else if (diff == -1)
   {
@@ -162,18 +189,31 @@ double
 Class_Potential_Origin::fermion(double MassSquared, double Temp, int diff) const
 {
   double res = 0;
-  if (diff >= 0) res = CWTerm(std::abs(MassSquared), C_CWcbFermion, diff);
+
+  // Initialize thermal tables once
+  if (!m_thermalTablesInitialized) {
+    m_thermalTablesInitialized = true;
+    std::cout << " initialized inside fermion: " << m_thermalTablesInitialized;  //debug Rafael
+  }
+
+  if (diff >= 0) {res = CWTerm(std::abs(MassSquared), C_CWcbFermion, diff);
+                  }
   double Ratio = MassSquared / std::pow(Temp, 2);
   if (Temp == 0) return res;
+  
   if (diff == 0)
   {
+    //res += std::pow(Temp, 4) / (2 * std::pow(M_PI, 2)) *
+    //       ThermalFunctions::JfermionInterpolated(Ratio);
     res += std::pow(Temp, 4) / (2 * std::pow(M_PI, 2)) *
-           ThermalFunctions::JfermionInterpolated(Ratio);
+           m_thermalTables.JF(Ratio);
   }
-  else if (diff == 1)
+          
+  //else if (diff == 1)
+  else if (diff > 0) //Carlo correction
   {
-    res += std::pow(Temp, 2) / (2 * std::pow(M_PI, 2)) *
-           ThermalFunctions::JfermionNumericalIntegration(Ratio, 1);
+    //res += std::pow(Temp, 2) / (2 * std::pow(M_PI, 2)) * ThermalFunctions::JfermionNumericalIntegration(Ratio, 1);
+    res += std::pow(Temp, 2) / (2 * std::pow(M_PI, 2)) * m_thermalTables.DJF(Ratio);
   }
   else if (diff == -1)
   {
@@ -2213,9 +2253,9 @@ std::vector<double> Class_Potential_Origin::WeinbergThirdDerivative() const
           {
             for (std::size_t c = 0; c < NHiggs; c++)
             {
-              double f1 = fbaseTri(std::abs(MassSquaredHiggs[a]),
-                                   std::abs(MassSquaredHiggs[b]),
-                                   std::abs(MassSquaredHiggs[c]));
+              double f1 = fbaseTri(MassSquaredHiggs[a],
+                                   MassSquaredHiggs[b],
+                                   MassSquaredHiggs[c]);
               double f2 = Couplings_Higgs_Triple[a][b][i];
               double f3 = Couplings_Higgs_Triple[b][c][j];
               double f4 = Couplings_Higgs_Triple[c][a][k];
@@ -2223,7 +2263,7 @@ std::vector<double> Class_Potential_Origin::WeinbergThirdDerivative() const
             }
             double f1 = Couplings_Higgs_Quartic[a][b][i][j];
             double f2 = Couplings_Higgs_Triple[b][a][k];
-            double f3 = fbase(std::abs(MassSquaredHiggs[a]), std::abs(MassSquaredHiggs[b])) -
+            double f3 = fbase(MassSquaredHiggs[a], MassSquaredHiggs[b]) -
                         C_CWcbHiggs + 0.5;
             Higgspart[i][j][k] += 3 * f1 * f2 * f3;
           }
@@ -2911,7 +2951,8 @@ Class_Potential_Origin::HiggsMassesSquared(const std::vector<double> &v,
 {
   std::vector<double> res;
 
-  auto MassMatrix = HiggsMassMatrix(v, Temp, diff);
+  //auto MassMatrix = HiggsMassMatrix(v, Temp, diff);
+  auto MassMatrix = HiggsMassMatrix(v, Temp, 0);//EU!!!
 
   double ZeroMass = std::pow(10, -5);
 
@@ -3568,12 +3609,12 @@ double Class_Potential_Origin::V1Loop(const std::vector<double> &v,
       for (std::size_t k = 0; k < NGauge; k++)
       {
         res += GaugeMassesVec.at(k + NGauge) *
-               boson(GaugeMassesVec.at(k), Temp, C_CWcbHiggs, diff);
+               boson(GaugeMassesVec.at(k), Temp, C_CWcbGB, diff);
       }
       for (std::size_t k = 0; k < NGauge; k++)
       {
         res += 2 * GaugeMassesZeroTempVec.at(k + NGauge) *
-               boson(GaugeMassesZeroTempVec.at(k), Temp, C_CWcbHiggs, diff);
+               boson(GaugeMassesZeroTempVec.at(k), Temp, C_CWcbGB, diff);
       }
       for (std::size_t k = 0; k < NQuarks; k++)
       {

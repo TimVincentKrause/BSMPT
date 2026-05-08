@@ -307,6 +307,8 @@ double JInterpolatedHigh(const double &x, const int &n, int diff)
 double JfermionInterpolated(const double &x, int diff)
 {
   double res = 0;
+  
+  //std::cout << "JfermionInterpolated x: " << x  << std::endl; Boto
   if (x >= C_FermionTheta)
   {
     res = -JInterpolatedHigh(x, 3, diff);

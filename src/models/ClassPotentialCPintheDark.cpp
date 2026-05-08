@@ -49,11 +49,11 @@ Class_Potential_CPintheDark::Class_Potential_CPintheDark(
 
   // Set UseVTreeSimplified to use the tree-level potential defined in
   // VTreeSimplified
-  UseVTreeSimplified = true;
+  UseVTreeSimplified = false; //EU!!! true;
 
   // Set UseVCounterSimplified to use the counterterm potential defined in
   // VCounterSimplified
-  UseVCounterSimplified = true;
+  UseVCounterSimplified = false; //EU!!! true;
 }
 
 Class_Potential_CPintheDark::~Class_Potential_CPintheDark()
@@ -250,6 +250,7 @@ void Class_Potential_CPintheDark::set_gen(const std::vector<double> &par)
   v1 = SMConstants.C_vev0;
 
   scale = SMConstants.C_vev0; // renormalisation scale is set to the SM VEV
+  //scale = 1e5 ;//EU!!!
 
   vevTreeMin.resize(nVEV);
   vevTree.resize(NHiggs);

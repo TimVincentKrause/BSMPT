@@ -11,11 +11,14 @@
 
 #include <BSMPT/minimizer/Minimizer.h>
 #include <BSMPT/minimum_tracer/minimum_tracer.h> // MinimumTracer
+#include <BSMPT/models/ClassPotentialCPintheDark.h> //EU!!!
 #include <BSMPT/models/IncludeAllModels.h>
+#include <BSMPT/utility/NumericalDerivatives.h> //EU!!!
 #include <BSMPT/utility/Logger.h>
 #include <BSMPT/utility/parser.h>
 #include <BSMPT/utility/utility.h>
 #include <algorithm> // for copy, max
+#include <cmath>//EU!!!
 #include <fstream>
 #include <iomanip> // for operator<<, setprecision
 #include <iostream>
@@ -100,6 +103,36 @@ try
     {
       std::pair<std::vector<double>, std::vector<double>> parameters =
           modelPointer->initModel(linestr);
+      //---------------EU!!!
+      if (args.Model == ModelID::ModelIDs::CPINTHEDARK)
+      {
+        auto CPiDModel =
+            std::dynamic_pointer_cast<Models::Class_Potential_CPintheDark>(
+                modelPointer);
+        if (not CPiDModel)
+        {
+          throw std::runtime_error(
+              "Failed to cast model to Class_Potential_CPintheDark.");
+        }
+
+        if (CPiDModel->m22s <= 0)
+        {
+          throw std::runtime_error(
+              "For CPinTheDark the requested renormalization scale "
+              "sqrt(m22s) is not real because m22s <= 0.");
+        }
+
+        const double newScale = 246.211;//EU!!! std::sqrt(CPiDModel->m22s);
+        parameters.second      = modelPointer->resetScale(newScale);
+
+        Logger::Write(LoggingLevel::ProgDetailed,
+                      "Reset renormalization scale to sqrt(m22s) = " +
+                          std::to_string(newScale) + " GeV.");
+      }
+      //---------------EU!!!
+
+
+
       found = true;
     }
     else if (linecounter > args.Line)
@@ -122,9 +155,10 @@ try
         (args.min_end.size() == modelPointer->get_nVEV()))
     {
       for (auto x : modelPointer->addLegendVEV())
-        outfile << std::setprecision(16) << x << sep;
+        outfile << std::setprecision(50) << x << sep;  
+      //outfile << std::setprecision(16) << x << sep;
 
-      outfile << "Veff(v,T)" << sep << "T" << std::endl;
+      outfile << "Veff(v,T)" << sep << "dVeff" << sep << "NdVeff" << sep << "Hess" << sep << "T" << std::endl;
 
       Logger::Write(LoggingLevel::ProgDetailed,
                     "Evaluating slice between start minimum at (" +
@@ -135,11 +169,29 @@ try
 
       auto grid_points =
           Create1DimGrid(args.min_start, args.min_end, args.npoints);
+
       for (auto point : grid_points)
       {
+        auto vfull = modelPointer->MinimizeOrderVEV(point);
+        auto Vslice = [modelPointer, temp](std::vector<double> phi) {
+          return modelPointer->VEff(modelPointer->MinimizeOrderVEV(phi), temp,
+                  0);
+        };
+        auto dVslice = [modelPointer, temp](std::vector<double> phi) {
+          return modelPointer->VEff(modelPointer->MinimizeOrderVEV(phi), temp,
+                  5);
+        };
+
+        auto grad_num = BSMPT::NablaNumerical(point, Vslice, 1.5);
+        auto hess_num = BSMPT::NablaNumerical(point, dVslice, 2.);
         outfile << point << sep
-                << modelPointer->VEff(modelPointer->MinimizeOrderVEV(point),
-                                      temp)
+          << modelPointer->VEff(vfull, temp, 0)
+                << sep
+          << modelPointer->VEff(vfull, temp, 5)
+                << sep
+          << (grad_num.empty() ? 0.0 : grad_num.at(0))
+                << sep
+          << (hess_num.empty() ? 0.0 : hess_num.at(0))
                 << sep << temp << std::endl;
       }
     }
@@ -155,7 +207,8 @@ try
   else
   {
     for (auto x : modelPointer->addLegendVEV())
-      outfile << std::setprecision(16) << x << sep;
+      outfile << std::setprecision(50) << x << sep;
+      //outfile << std::setprecision(16) << x << sep;
 
     for (auto x : modelPointer->addLegendVEV())
     {

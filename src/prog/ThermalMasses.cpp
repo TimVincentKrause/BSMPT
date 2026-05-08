@@ -12,6 +12,8 @@
 
 #include <BSMPT/minimizer/Minimizer.h>
 #include <BSMPT/minimum_tracer/minimum_tracer.h> // MinimumTracer
+#include <BSMPT/models/ClassPotentialCPintheDark.h>//EU!!!
+#include <BSMPT/utility/NumericalDerivatives.h>//EU!!!
 #include <BSMPT/models/ClassPotentialOrigin.h>   // for Class_Potential_Origin
 #include <BSMPT/models/IncludeAllModels.h>
 #include <BSMPT/transition_tracer/transition_tracer.h> // TransitionTracer
@@ -19,6 +21,7 @@
 #include <BSMPT/utility/parser.h>
 #include <BSMPT/utility/utility.h>
 #include <algorithm> // for copy, max
+#include <cmath>//EU!!!
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -28,8 +31,6 @@
 #include <string>   // for string, operator<<
 #include <utility>  // for pair
 #include <vector>   // for vector
-#include <BSMPT/utility/NumericalDerivatives.h> //EU!!!
-#include "Eigen/Eigenvalues" //EU!!!
 
 using namespace std;
 using namespace BSMPT;
@@ -53,6 +54,7 @@ struct CLIOptions
   bool good() const;
 };
 
+
 BSMPT::parser prepare_parser();
 
 std::vector<std::string> convert_input(int argc, char *argv[]);
@@ -74,7 +76,7 @@ try
   {
     Logger::Write(LoggingLevel::Default,
                   "Input file " + args.inputfile + " not found ");
-    return EXIT_FAILURE;
+    return EXIT_FAILURE; 
   }
 
   Logger::Write(LoggingLevel::ProgDetailed, "Found file");
@@ -85,7 +87,7 @@ try
   Logger::Write(LoggingLevel::ProgDetailed, "Created modelpointer ");
 
   std::string linestr, linestr_store;
-  int linecounter = 1, filecounter = 1;
+  int linecounter = 1;
 
   while (getline(infile, linestr))
   {
@@ -99,7 +101,7 @@ try
                     "Currently at line " + std::to_string(linecounter));
 
       std::string outfilename =
-          args.outputfile + "_" + std::to_string(filecounter) + ".tsv";
+          args.outputfile /*+ "_" + std::to_string(filecounter)*/ + ".tsv";
       Logger::Write(LoggingLevel::ProgDetailed,
                     "Creating outfile with name " + outfilename);
       std::ofstream outfile(outfilename);
@@ -110,10 +112,33 @@ try
         return EXIT_FAILURE;
       }
 
+      constexpr int OutputDecimalPlaces = 19;
+      outfile << std::fixed << std::setprecision(OutputDecimalPlaces);
+
       modelPointer->setUseIndexCol(linestr_store);
 
       std::pair<std::vector<double>, std::vector<double>> parameters =
           modelPointer->initModel(linestr);
+
+
+
+        //---------------EU!!!
+        double T_high = args.temphigh;
+        int N_points = args.npoints;
+        if (args.Model == ModelID::ModelIDs::CPINTHEDARK)
+          {
+          auto CPiDModel =
+            std::dynamic_pointer_cast<Models::Class_Potential_CPintheDark>(
+              modelPointer);
+          if (not CPiDModel){
+            throw std::runtime_error(
+              "Failed to cast model to Class_Potential_CPintheDark.");
+          }
+
+          T_high = std::max(std::sqrt(CPiDModel->mSs)/10.,300.);
+          N_points = (int) T_high;
+        }
+        //---------------EU!!!
 
       modelPointer->write();
 
@@ -151,12 +176,10 @@ try
       Logger::Write(
           LoggingLevel::ProgDetailed,
           "Track phases in between T_low = " + std::to_string(args.templow) +
-              " and T_high = " + std::to_string(args.temphigh));
-
-      //bool do_only_tracing = true;
+              " and T_high = " + std::to_string(T_high)); //EU!!! args.temphigh
 
       Vacuum vac(args.templow,
-                 args.temphigh,
+                 T_high, //EU!!! args.temphigh
                  MinTracer,
                  modelPointer,
                  args.UseMultiStepPTMode,
@@ -169,11 +192,10 @@ try
                         StatusTracingToString.at(vac.status_vacuum) +
                         ".\n-------------------------------");
 
-      if ((vac.PhasesList.size() != 2) and (vac.PhasesList.size() != 1))
+      if (vac.PhasesList.size() != 2)
         throw std::runtime_error(
             "This code is not ready for handling anything other than "
             "two phases!\n");
-
 
       // prepare legend
       std::vector<std::string> LegendMinima;
@@ -181,66 +203,45 @@ try
       LegendMinima.push_back("status_ewsr");
       LegendMinima.push_back("status_tracing");
 
-
-      LegendMinima.push_back("Temp");
-
+      LegendMinima.push_back("Temp");                                     //EU!!! T -> Temp
       for (std::size_t j = 0; j < modelPointer->get_nVEV(); j++)
         LegendMinima.push_back(modelPointer->addLegendVEV().at(j));
-      // only v dependent masses
-      for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++)
-        LegendMinima.push_back("mS_" + to_string(j) + "sq");
-      // v and T dependent masses
-      for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++)
-        LegendMinima.push_back("mS_" + to_string(j) + "sq_T");
+      // for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++)     //EU!!! commented this
+      //   LegendMinima.push_back("mS_" + to_string(j));
       for (std::size_t j = 0; j < modelPointer->get_NLepton(); j++)
-        LegendMinima.push_back("mL_" + to_string(j) + "sq");
+        LegendMinima.push_back("mL_" + to_string(j));
       for (std::size_t j = 0; j < modelPointer->get_NQuarks(); j++)
-        LegendMinima.push_back("mQ_" + to_string(j) + "sq");
-      // only v dependent masses
+        LegendMinima.push_back("mQ_" + to_string(j));
       for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
-        LegendMinima.push_back("mG_" + to_string(j) + "sq");
-      // v and T dependent masses
+        LegendMinima.push_back("mG_" + to_string(j));
       for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
-        LegendMinima.push_back("mG_" + to_string(j) + "sq_T");
-      
-      for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++){
-        for (std::size_t k = 0; k < modelPointer->get_NHiggs(); k++)
-          LegendMinima.push_back("MS_" + to_string(j) + to_string(k));
-      }
-      // Hessian diagonals
-      for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++){
-        for (std::size_t k = 0; k < modelPointer->get_NHiggs(); k++)
-          LegendMinima.push_back("VeffHess_" + to_string(j)+ to_string(k));
-      }
-      // Rotation Matrix before checking of convention
-      for (std::size_t j = 0; j < 3; j++){
-        for (std::size_t k = 0; k < 3; k++)
-          LegendMinima.push_back("Rbf" + to_string(j) + to_string(k));
-      }
-      // potential masses
-      LegendMinima.push_back("m_pot_GWpsq");
-      LegendMinima.push_back("m_pot_GWmsq");
-      LegendMinima.push_back("m_pot_GZsq");
-      LegendMinima.push_back("m_pot_Hsmsq");
-      LegendMinima.push_back("m_pot_H1sq");
-      LegendMinima.push_back("m_pot_H2sq");
-      LegendMinima.push_back("m_pot_H3sq");
-      LegendMinima.push_back("m_pot_Hpsq");
-      LegendMinima.push_back("m_pot_Hmsq");
+        LegendMinima.push_back("mG_TH_" + to_string(j));
+      //LegendMinima.push_back("Veff(v,T)");
 
-      // DM-Rotation matrix (this is only for CPintheDark)
-      for (std::size_t j = 0; j < 3; j++){
-        for (std::size_t k = 0; k < 3; k++)
-          LegendMinima.push_back("R" + to_string(j) + to_string(k) + "_T");
-      }
+      //---------EU!!!--------------
+      LegendMinima.push_back("PI_" + to_string(0) + "x" + to_string(0) );
+      LegendMinima.push_back("PI_" + to_string(3) + "x" + to_string(3) );
+      LegendMinima.push_back("PI_" + to_string(4) + "x" + to_string(4) );
+      LegendMinima.push_back("PI_" + to_string(5) + "x" + to_string(5) );
+      for (std::size_t j = 6; j < modelPointer->get_NHiggs(); j++){ 
+        for (std::size_t i = 6; i < modelPointer->get_NHiggs(); i++){
+          LegendMinima.push_back("PI_" + to_string(j) + "x" + to_string(i) );
+        }
+      } 
+      LegendMinima.push_back("d2Veff_" + to_string(0) + "x" + to_string(0) );
+      LegendMinima.push_back("d2Veff_" + to_string(3) + "x" + to_string(3) );
+      LegendMinima.push_back("d2Veff_" + to_string(4) + "x" + to_string(4) );
+      LegendMinima.push_back("d2Veff_" + to_string(5) + "x" + to_string(5) );
+      for (std::size_t j = 6; j < modelPointer->get_NHiggs(); j++){ 
+        for (std::size_t i = 6; i < modelPointer->get_NHiggs(); i++){
+          LegendMinima.push_back("d2Veff_" + to_string(j) + "x" + to_string(i) );
+        }
+      } 
+      LegendMinima.push_back("Tcrit");
 
-      // angles
-      LegendMinima.push_back("a1_T");
-      LegendMinima.push_back("a2_T");
-      LegendMinima.push_back("a3_T");
-      
       LegendMinima.push_back("runtime");
-      outfile << linestr_store << sep << modelPointer->addLegendCT() << sep
+      outfile << linestr_store << sep 
+              //<< modelPointer->addLegendCT() << sep
               << LegendMinima << std::endl;
 
       std::size_t length = 0;
@@ -258,9 +259,8 @@ try
 
       if (length == 0)
       {
-        outfile << std::setprecision(16);
         outfile << linestr;
-        outfile << sep << parameters.second;
+        //outfile << sep << parameters.second;
         outfile << sep << status_nlostable;
         outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
@@ -273,33 +273,20 @@ try
         outfile << std::endl;
       }
 
-      std::cout << "T_list" << std::endl;
       std::vector<double> T_list;
-
-      std::cout << "npoints=" << args.npoints << std::endl;
-      std::cout << "thigh=" << args.temphigh << std::endl;
-      std::cout << "tlow=" << args.templow << std::endl;
-      for (int n = 0; n < args.npoints; n++)
+      for (int n = 0; n < N_points; n++)
         T_list.push_back(args.templow +
-                         n * (args.temphigh - args.templow) / args.npoints);
-      std::cout << "do T_list" << std::endl;
+                         n * (T_high - args.templow) / N_points);
 
-      std::cout << "tcrit=" << vac.CoexPhasesList.at(0).crit_temp << std::endl;
-      if (vac.PhasesList.size() == 2)
-      {
-        T_list.insert(std::lower_bound(T_list.begin(),
-                                      T_list.end(),
-                                      vac.CoexPhasesList.at(0).crit_temp),
-                      vac.CoexPhasesList.at(0).crit_temp);
-      }
+      T_list.insert(std::lower_bound(T_list.begin(),
+                                     T_list.end(),
+                                     vac.CoexPhasesList.at(0).crit_temp),
+                    vac.CoexPhasesList.at(0).crit_temp);
 
-      std::cout << "start T_list for loop" << std::endl;
-      // for every temperature:
       for (const auto T : T_list)
       {
-        outfile << std::setprecision(16);
         outfile << linestr;
-        outfile << sep << parameters.second;
+        //outfile << sep << parameters.second;
         outfile << sep << status_nlostable;
         outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
@@ -307,17 +294,9 @@ try
 
         std::vector<double> vev;
 
-
-        if (vac.PhasesList.size() == 2)
+        if (T <= vac.CoexPhasesList.at(0).crit_temp)
         {
-          if (T <= vac.CoexPhasesList.at(0).crit_temp)
-          {
-            vev = vac.PhasesList.at(1).Get(T).point;
-          }
-          else
-          {
-            vev = vac.PhasesList.at(0).Get(T).point;
-          }
+          vev = vac.PhasesList.at(1).Get(T).point;
         }
         else
         {
@@ -325,223 +304,44 @@ try
         }
 
         outfile << sep << vev;
-        outfile << sep
-                << modelPointer->HiggsMassesSquared(
-                       modelPointer->MinimizeOrderVEV(vev), 0);
-        outfile << sep
-                << modelPointer->HiggsMassesSquared(
-                       modelPointer->MinimizeOrderVEV(vev), T);
-        outfile << sep
-                << modelPointer->LeptonMassesSquared(
-                       modelPointer->MinimizeOrderVEV(vev));
-        outfile << sep
-                << modelPointer->QuarkMassesSquared(
-                       modelPointer->MinimizeOrderVEV(vev));
-        outfile << sep
-                << modelPointer->GaugeMassesSquared(
-                       modelPointer->MinimizeOrderVEV(vev), 0);
-        outfile << sep
-                << modelPointer->GaugeMassesSquared(
-                       modelPointer->MinimizeOrderVEV(vev), T);
+        auto vevMinOrder = modelPointer->MinimizeOrderVEV(vev);
+        outfile << sep << vector_sqrt(modelPointer->LeptonMassesSquared(vevMinOrder));
+        outfile << sep << vector_sqrt(modelPointer->QuarkMassesSquared(vevMinOrder));
+        outfile << sep << vector_sqrt(modelPointer->GaugeMassesSquared(vevMinOrder, 0));
+        outfile << sep << vector_sqrt(modelPointer->GaugeMassesSquared(vevMinOrder, T));
 
-        // output HiggsMassMAtrix;
-        for (std::size_t k = 0; k < pow(modelPointer->get_NHiggs(),2);k++){ 
-          outfile << sep
-                  << modelPointer->HiggsMassMatrix(
-                          modelPointer->MinimizeOrderVEV(vev), T,0)(k);
-        }
-        /* --- */
-
-        // calculate the Hessian of the potential
-        std::vector<std::vector<double>> Hessian;
-        double eps = 0.1;
-
-        // Define effective potential
-        std::function<double(std::vector<double>)> Veff;
-        Veff = [&](std::vector<double> effvev)
-        {
-          // Potential wrapper
-          return modelPointer->VEff(effvev, T);
-        };
-
-        Hessian = HessianNumerical(modelPointer->MinimizeOrderVEV(vev),Veff, eps);
-
-        outfile << sep
-                << Hessian;
-
-              
-                
-        // Calculation of eigenvalues
-
-        MatrixXd eigenhess(modelPointer->get_NHiggs(),modelPointer->get_NHiggs());
-
-        // Conversion from vector to MatrixXd
-        for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++){
-          for (std::size_t k = 0; k < modelPointer->get_NHiggs(); k++)
-            if (std::abs(eigenhess(j, k)) < std::pow(10, -3)) {eigenhess(j, k) = 0;}
-            else {eigenhess(j,k) = Hessian[j][k];}
-        }
-
-        Eigen::SelfAdjointEigenSolver<MatrixXd> es(eigenhess, Eigen::EigenvaluesOnly);
-
-        // eigenvalues
-        std::vector<double> MassSquaredHiggs(modelPointer->get_NHiggs());
-        for (std::size_t i = 0; i < modelPointer->get_NHiggs(); i++)
-        {
-          MassSquaredHiggs[i] = es.eigenvalues()[i];
-          if (std::abs(MassSquaredHiggs[i]) < 1e-5) MassSquaredHiggs[i] = 0;
-        }
-
-        // calculation of order of Higgs particles
-        double tmpmass = MassSquaredHiggs[5];
-
-        size_t i_mHp = 6;
-        size_t i_mH2, i_mH3;
-
-        while (i_mHp<8){
-          if (tmpmass == MassSquaredHiggs[i_mHp]) {break;}
-          else {tmpmass = MassSquaredHiggs[i_mHp];}
-          i_mHp++;
-        }
-
-        if      (i_mHp==6){i_mH2 = 7; i_mH3 = 8;}
-        else if (i_mHp==7){i_mH2 = 5; i_mH3 = 8;}
-        else if (i_mHp==8){i_mH2 = 5; i_mH3 = 6;}
-
-        // Calculation of DM - Rotation matrix (CPintheDark)
-        MatrixXd dmmatrix(3,3);
-        for (std::size_t j = 0; j < 3; j++){
-          for (std::size_t k = 0; k < 3; k++)
-            if (std::abs(Hessian[6+j][6+k]) < std::pow(10, -2)) {dmmatrix(j, k) = 0;}
-            else {dmmatrix(j,k) = Hessian[6+j][6+k];}
-        }
-
-        // CPintheDark-specific:
-        // if the DM mass matrix is nearly diagonal, m[0][0] = m[1][1].
-        // but because they are numerically calculated one can be bigger than the other
-        // this can lead to jumps in the mass matrices.
-        // -> here put the smallest value always in the first entry
-
-        if ((std::abs(dmmatrix(1,1) - dmmatrix(0,0))) < 1e-3 and (dmmatrix(0,0) < dmmatrix(1,1)))
-        {
-          double tmpval = dmmatrix(1,1);
-          dmmatrix(1,1) = dmmatrix(0,0);
-          dmmatrix(0,0) = tmpval;
-        }
-
-        Eigen::SelfAdjointEigenSolver<MatrixXd> esdm(dmmatrix);
-        MatrixXd HiggsRot = esdm.eigenvectors().transpose();
-
-        for (std::size_t i = 0; i < 3; i++)
-        {
-          for (std::size_t j = 0; j < 3; j++)
-          {
-            if (std::abs(HiggsRot(i, j)) < std::pow(10, -7)) {HiggsRot(i, j) = 0;}
+        //const long double veff = modelPointer->VEff(vevMinOrder, T);
+        //outfile << sep << veff;
+        
+        // Cache HiggsMassMatrix once
+        auto HiggsMassMatrixT = modelPointer->HiggsMassMatrix(vevMinOrder, T);
+        
+        //---------EU!!!--------------
+        outfile << sep << HiggsMassMatrixT(0,0);
+        outfile << sep << HiggsMassMatrixT(3,3);
+        outfile << sep << HiggsMassMatrixT(4,4);
+        outfile << sep << HiggsMassMatrixT(5,5);
+        for (std::size_t j = 6; j < modelPointer->get_NHiggs(); j++){ 
+          for (std::size_t i = 6; i < modelPointer->get_NHiggs(); i++){
+            outfile << sep << HiggsMassMatrixT(j,i);
           }
         }
 
+        std::function<double(std::vector<double>)> Vfun =
+            [&](std::vector<double> a) { return modelPointer->VEff(a, T); };
 
-        for (std::size_t j = 0; j < 3; j++){
-          for (std::size_t k = 0; k < 3; k++){
-          outfile << sep
-                  << HiggsRot(j,k) ;}
+        std::vector<std::vector<double>> Hessian =
+            HessianNumerical(vevMinOrder, Vfun, 0.005 * std::max(L2NormVector(vevMinOrder), T));
+        outfile << sep << Hessian[0][0];
+        outfile << sep << Hessian[3][3];
+        outfile << sep << Hessian[4][4];
+        outfile << sep << Hessian[5][5];
+        for (std::size_t j = 6; j < modelPointer->get_NHiggs(); j++){ 
+          for (std::size_t i = 6; i < modelPointer->get_NHiggs(); i++){
+            outfile << sep << Hessian[j][i];
+          }
         }
-
-        
-        std::cout << "T = " << T << std::endl;
-
-        std::cout << "DMmatrix" << std::endl;
-        std::cout << dmmatrix << std::endl;
-
-        std::cout << "HiggsRotbef" << std::endl;
-        std::cout << HiggsRot << std::endl;
-
-
-
-        std::cout << "HiggsRot(0,0) = " << HiggsRot(0,0) << std::endl;
-        std::cout << "HiggsRot(2,2) = " << HiggsRot(2,2) << std::endl;
-        
-        std::cout << "detR = " << HiggsRot.determinant() << std::endl;
-
-
-
-        // Set correct parametrisation 
-        if (HiggsRot(0,0) < 0)
-        {HiggsRot.row(0) *= -1;}
-        if (HiggsRot(2,2) < 0)
-        {HiggsRot.row(2) *= -1;}
-        if (HiggsRot.determinant() < 0) 
-        {HiggsRot.row(1) *= -1;}
-
-        std::cout << "HiggsRot" << std::endl;
-        std::cout << HiggsRot << std::endl;
-
-
-        // Angle Calculation
-
-        double s2 = HiggsRot(0,2);
-        double s1, s3;
-
-        // if s2 == 1, the matrix reduces to 
-        // 2 d.o.f so we choose the following
-        // parametrisation:
-        if (s2 == 1)
-        {
-          s1 = 1; s3=1;
-        }
-        else
-        {
-        s1 = HiggsRot(0,1) / (std::sqrt(1 - s2*s2));
-        s3 = HiggsRot(1,2) / (std::sqrt(1 - s2*s2));
-        }
-
-        double a1 = std::asin(s1);
-        double a2 = std::asin(s2);
-        double a3 = std::asin(s3);
-
-        std::cout << "sines" << std::endl;
-        std::cout << "s1 = " << s1 << std::endl;
-        std::cout << "s2 = " << s2 << std::endl;
-        std::cout << "s3 = " << s3 << std::endl;
-
-        std::cout << "angles" << std::endl;
-        std::cout << "a1 = " << a1 << std::endl;
-        std::cout << "a2 = " << a2 << std::endl;
-        std::cout << "a3 = " << a3 << std::endl;
-
-        std::cout << "-----" << std::endl;
-        std::cout << "-----" << std::endl;
-
-        // output
-
-        for (size_t i = 0; i<5;i++){
-          outfile << sep
-                  << MassSquaredHiggs[i];
-
-        }
-        outfile << sep
-                << MassSquaredHiggs[i_mH2];
-        outfile << sep
-                << MassSquaredHiggs[i_mH3];
-        outfile << sep
-                << MassSquaredHiggs[i_mHp];
-        outfile << sep
-                << MassSquaredHiggs[i_mHp-1];
-
-
-        for (std::size_t j = 0; j < 3; j++){
-          for (std::size_t k = 0; k < 3; k++){
-          outfile << sep
-                  << HiggsRot(j,k) ;}
-        }
-
-        outfile << sep
-                << a1;
-        outfile << sep
-                << a2;
-        outfile << sep
-                << a3;
-
+        outfile << sep << vac.CoexPhasesList.at(0).crit_temp;
         auto time = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::high_resolution_clock::now() - start)
                         .count() /
@@ -551,7 +351,6 @@ try
         outfile << std::endl;
       }
 
-      filecounter++;
       outfile.close();
 
       auto time = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -613,7 +412,6 @@ bool CLIOptions::good() const
     Logger::Write(LoggingLevel::Default, "line not set.");
     return false;
   }
-
   if (templow >= temphigh)
   {
     Logger::Write(LoggingLevel::Default,
@@ -624,6 +422,11 @@ bool CLIOptions::good() const
   {
     Logger::Write(LoggingLevel::Default,
                   "Invalid npoints choice. npoints has to be > 0.");
+    return false;
+  }
+  if (num_check_pts < 0)
+  {
+    Logger::Write(LoggingLevel::Default, "Invalid choice for num_check_pts.");
     return false;
   }
   if (CheckEWSymmetryRestoration > 2 or CheckEWSymmetryRestoration < 0)

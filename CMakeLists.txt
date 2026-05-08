@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 cmake_minimum_required(VERSION 3.23)
-set(BSMPT_VERSION 3.1.11)
+set(BSMPT_VERSION 3.1.3)
 project(
   BSMPT
   VERSION ${BSMPT_VERSION}
@@ -56,6 +56,10 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+
+add_compile_definitions(
+    BSMPT_TABLES_PATH="${CMAKE_CURRENT_BINARY_DIR}/bin/tables"
+)
 
 include(LTO)
 
@@ -165,6 +169,7 @@ endif(EnableCoverage)
 find_lto(CXX)
 
 add_subdirectory(src)
+add_subdirectory(tables)
 add_subdirectory(standalone)
 
 # ------------------------ Doxygen --------------------------------------------

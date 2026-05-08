@@ -521,7 +521,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
   double currentT = currentT_In;
   double dT       = dT_In;
   double initialdT;
-  double eps = 0.1;
+  double eps = 0.1; //JOAO!!! (original 0.1)
   double LengthGradient, PotentialDifference, Distance;
   std::function<std::vector<double>(std::vector<double>)> dV;
   std::function<std::vector<std::vector<double>>(std::vector<double>)> Hessian;
@@ -562,12 +562,37 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
     {
       // Potential wrapper
       std::vector<double> res = this->modelPointer->MinimizeOrderVEV(vev);
-      return this->modelPointer->VEff(res, currentT) /
-             (1 + currentT * currentT);
+      return (this->modelPointer->VEff(res, currentT)) / (1 + currentT * currentT);
     };
-    dV      = [=](auto const &arg) { return NablaNumerical(arg, V, eps); };
-    Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, eps); };
+    //dV      = [=](auto const &arg) { return NablaNumerical(arg, V, eps); };
+    //EU!!!
+    dV = [&](std::vector<double> arg)
+    {
+        std::vector<double> res = this->modelPointer->MinimizeOrderVEV(arg);
+        std::vector<double> grad(arg.size());
+        double norm = 1.0 / (1.0 + currentT * currentT);
 
+        for (size_t i = 0; i < arg.size(); i++){
+            grad[i] = this->modelPointer->VEff(res, currentT, 5) * norm;
+      }
+        return grad;
+    };
+    
+    //Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, 0.4); };
+    Hessian = [=](auto const &arg) -> std::vector<std::vector<double>>
+    {
+      size_t n = arg.size();        
+      std::vector<std::vector<double>> H(n, std::vector<double>(n, 0.0));
+      for (size_t i = 0; i < n; ++i)
+      {
+        auto fi = [&](std::vector<double> a) -> double { return dV(a)[i]; };
+        std::vector<double> row = NablaNumerical(arg, fi, eps);
+        for (size_t j = 0; j < n; ++j){
+          H[i][j] = row[j];
+        }
+      }
+      return H;
+    };
     // Locate the minimum
     new_point =
         LocateMinimum(point, dV, Hessian, 1e-4 * GradientThreshold * dim);
@@ -588,7 +613,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
     PotentialDifference = V(new_point) - V(point);
 
     // If the minimum it n GeV away then we consider it a new phase
-    double ThresholdDistance = (double)dim;
+    double ThresholdDistance = 1.; //JOAO!!! (original (double)dim;)
     if (abs(dT) < 1e-5)
     {
       break;
@@ -606,7 +631,7 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
 
       ss << "\n\033[1;95m.-> | T = " << currentT
          << " |Grad|/dim =  " << LengthGradient << " | Distance = " << Distance
-         << " Grad =  (" << dV(new_point) << ")"
+         << " | Grad =  (" << dV(new_point) << ")"
          << " | |dphi/dT| = " << abs(Distance / dT)
          << " | deltaV = " << PotentialDifference
          << " | SEV = " << SmallestEigenvalue(new_point, Hessian)
@@ -1204,7 +1229,7 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
   double ActualSmallestEigenvalue    = 0;
   double OldSmallestEigenvalue       = 1e100;
   double EvenOlderSmallestEigenvalue = 1e200;
-  double eps                         = 0.1;
+  double eps                         = 1.5;
   double treshold                    = 1e-6;
   double Tmax                        = 1e10;
   std::vector<double> gradient, stationary_point;
@@ -1233,8 +1258,35 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
         return this->modelPointer->VEff(res, T) / (1 + T * T * log(T * T));
       return this->modelPointer->VEff(res, T) / (1 + T * T);
     };
-    dV      = [=](auto const &arg) { return NablaNumerical(arg, V, eps); };
+
+    dV = [=](auto const &arg) { return NablaNumerical(arg, V, eps); };
+    // dV = [&](std::vector<double> arg)
+    // {
+    //     std::vector<double> res = this->modelPointer->MinimizeOrderVEV(arg);
+    //     std::vector<double> grad(arg.size());
+    //     double norm = 1.0 / (1.0 + T * T);
+
+    //     for (size_t i = 0; i < arg.size(); i++){
+    //         grad[i] = this->modelPointer->VEff(res, T, 5) * norm;
+    //   }
+    //     return grad;
+    // };
+    
     Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, eps); };
+    // Hessian = [=](auto const &arg) -> std::vector<std::vector<double>>
+    // {
+    //   size_t n = arg.size();        
+    //   std::vector<std::vector<double>> H(n, std::vector<double>(n, 0.0));
+    //   for (size_t i = 0; i < n; ++i)
+    //   {
+    //     auto fi = [&](std::vector<double> a) -> double { return dV(a)[i]; };
+    //     std::vector<double> row = NablaNumerical(arg, fi, eps);
+    //     for (size_t j = 0; j < n; ++j){
+    //       H[i][j] = row[j];
+    //     }
+    //   }
+    //   return H;
+    // };
 
     ActualSmallestEigenvalue = SmallestEigenvalue(point, Hessian);
 
@@ -1279,7 +1331,7 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
 
   // Check if point is reasonable.
   for (const auto &vev : point)
-    if (isnan(vev)) return 0;
+    if (not std::isfinite(vev)) return 0;//EU!!! if (isnan(vev)) return 0;
 
   // Save global minimum to use as seed point for the high temperature VEV
   HighTemperatureVEV = point;
@@ -1325,6 +1377,7 @@ void CoexPhases::CalculateTc()
   // check if phase dont overlap at just a single point
   if (T_high == T_low)
   {
+
     Logger::Write(
         LoggingLevel::MinTracerDetailed,
         "Phases coincide at a single point. Tc cannot be calculated.");
@@ -1333,9 +1386,64 @@ void CoexPhases::CalculateTc()
     crit_temp   = -1;
     return;
   }
-  // deltaV has to be negative for the transition to occur
+
+  //deltaV has to be negative for the transition to occur
+  // auto deltaV = [&](double T)
+  // { return true_phase.Get(T).potential - false_phase.Get(T).potential; };
+  //EU!!!
   auto deltaV = [&](double T)
-  { return true_phase.Get(T).potential - false_phase.Get(T).potential; };
+  {
+    auto false_min = false_phase.Get(T);
+    auto true_min  = true_phase.Get(T);
+
+    auto modelPointer = false_phase.MinTracer->GetModelPointer();
+
+    const std::vector<double> start = false_min.point;
+    const std::vector<double> end    = true_min.point;
+    const std::vector<double> path   = end - start;
+    const double path_length         = L2NormVector(path);
+
+    if (std::abs(path_length) < 1e-10)
+    {
+      return 0.0;
+    }
+
+    std::function<std::vector<double>(std::vector<double>)> dV = [&](std::vector<double> arg)
+    {
+        std::vector<double> res = modelPointer->MinimizeOrderVEV(arg);
+        std::vector<double> grad(arg.size());
+
+        for (size_t i = 0; i < arg.size(); i++){
+            grad[i] = modelPointer->VEff(res, T, 5);
+      }
+        return grad;
+    };
+
+    auto dot_product = [](const std::vector<double> &a,
+                          const std::vector<double> &b)
+    {
+      double res = 0;
+      for (std::size_t i = 0; i < a.size(); ++i) res += a[i] * b[i];
+      return res;
+    };
+
+    std::size_t nsteps = std::max<std::size_t>(50, 10 * start.size());
+    if (nsteps % 2 == 1) nsteps += 1;
+
+    const double ds = 1. / static_cast<double>(nsteps);
+    double integral = 0;
+
+    for (std::size_t i = 0; i <= nsteps; ++i)
+    {
+      const double s = ds * static_cast<double>(i);
+      const std::vector<double> point = start + s * path;
+      const double weight =
+          (i == 0 || i == nsteps) ? 1.0 : ((i % 2 == 0) ? 2.0 : 4.0);
+      integral += weight * dot_product(dV(point), path);
+    }
+
+    return integral * ds / 3.0;
+  };
 
   /// Ploting deltaV
   std::stringstream ss;
@@ -1365,7 +1473,7 @@ void CoexPhases::CalculateTc()
                   "True vacuum candidate is never energetically viable.");
 
     crit_status = BSMPT::StatusCrit::FalseLower;
-    crit_temp   = -1;
+    crit_temp   = T_low;//EU!!! -1;
   }
   else if (deltaV(T_high) < 0 and deltaV(T_low) < 0)
   {
@@ -2666,6 +2774,60 @@ void Vacuum::setCoexRegion(const MultiStepPTMode &MultiStepPTMode)
                           std::to_string(T_low_hole) + " GeV and " +
                           std::to_string(T_high_hole) + " GeV!");
         status_vacuum = StatusTracing::NoCoverage;
+
+        //EU!!! 
+        //For very small gaps: skip patching and force Tc directly to a gap endpoint.
+        const double TinyGapForceTcThreshold = 1.0; //EU!!! (GeV)
+        double gap_size = std::abs(T_high_hole - T_low_hole);
+        if (gap_size <= TinyGapForceTcThreshold)
+        {
+          int low_phase_idx  = -1; // phase ending at lower edge
+          int high_phase_idx = -1; // phase starting at upper edge
+          double best_low    = 1e100;
+          double best_high   = 1e100;
+
+          for (std::size_t k = 0; k < PhasesList.size(); ++k)
+          {
+            double dlow = std::abs(PhasesList[k].T_high - T_low_hole);
+            if (dlow < best_low)
+            {
+              best_low      = dlow;
+              low_phase_idx = int(k);
+            }
+
+            double dhigh = std::abs(PhasesList[k].T_low - T_high_hole);
+            if (dhigh < best_high)
+            {
+              best_high      = dhigh;
+              high_phase_idx = int(k);
+            }
+          }
+
+          if (low_phase_idx >= 0 && high_phase_idx >= 0 &&
+              low_phase_idx != high_phase_idx)
+          {
+            CoexPhases forced_pair;
+            forced_pair.coex_pair_id = int(CoexPhasesList.size());
+            forced_pair.false_phase  = PhasesList[low_phase_idx];
+            forced_pair.true_phase   = PhasesList[high_phase_idx];
+            forced_pair.T_low        = T_low_hole;
+            forced_pair.T_high       = T_high_hole;
+            forced_pair.crit_temp    = T_low_hole; // choose lower endpoint
+            forced_pair.crit_status  = BSMPT::StatusCrit::Success;
+            CoexPhasesList.push_back(forced_pair);
+            status_coex_pairs = StatusCoexPair::Success;
+            status_vacuum     = StatusTracing::Success;
+
+            Logger::Write(LoggingLevel::MinTracerDetailed,
+                          "Tiny gap detected (dT = " + std::to_string(gap_size) +
+                              " GeV).\nSkipping patching and forcing Tc = " +
+                              std::to_string(forced_pair.crit_temp) +
+                              " GeV using phases (" +
+                              std::to_string(forced_pair.false_phase.id) + ", " +
+                              std::to_string(forced_pair.true_phase.id) + ").");
+            continue;
+          }
+        }
 
         if (not(MultiStepPTMode == MultiStepPTMode::OneStep))
         {

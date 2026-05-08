@@ -314,7 +314,7 @@ public:
    * @brief Threshold for the acceptable gradient
    *
    */
-  double GradientThreshold = 1e-3;
+  double GradientThreshold = 0.01; //JOAO (original 0.01)
 
   /**
    * @brief Add a constant to the diagonals of the hessian matrix in the
@@ -349,6 +349,17 @@ public:
   MinimumTracer(const std::shared_ptr<Class_Potential_Origin> &pointer_in,
                 const int &WhichMinimizer_in,
                 const bool &UseMultithreading_in);
+
+  //EU!!!
+  /**
+   * @brief Get the model pointer used by the minimum tracer
+   *
+   * @return shared pointer to the model
+   */
+  std::shared_ptr<Class_Potential_Origin> GetModelPointer() const
+  {
+    return modelPointer;
+  }
 
   /**
    * @brief Calculates flat field directions

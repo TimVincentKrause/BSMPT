@@ -8,9 +8,11 @@ set(header_path "${BSMPT_SOURCE_DIR}/${suffix}")
 
 set(header
     ${header_path}/ThermalFunctions.h ${header_path}/NegativeBosonSpline.h
-    ${header_path}/thermalcoefficientcalculator.h)
-set(src thermalcoefficientcalculator.cpp ThermalFunctions.cpp
-        NegativeBosonSpline.cpp)
+    ${header_path}/thermalcoefficientcalculator.h 
+    ${header_path}/thermal_table.hpp
+    ${header_path}/interpolation.hpp)
+set(src thermal_table.cpp thermalcoefficientcalculator.cpp ThermalFunctions.cpp
+        NegativeBosonSpline.cpp interpolation.cpp)
 
 add_library(ThermalFunctions ${header} ${src})
 

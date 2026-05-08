@@ -15,6 +15,7 @@
 #include <BSMPT/minimizer/Minimizer.h>
 #include <BSMPT/models/IncludeAllModels.h>
 #include <BSMPT/models/SMparam.h>
+#include <BSMPT/ThermalFunctions/thermal_table.hpp>
 #include <BSMPT/utility/settings.h>
 #include <iostream>
 #include <vector>
@@ -72,6 +73,12 @@ protected:
    * @brief UseTreeLevel Enforces VEff to only use the tree-level potential
    */
   bool UseTreeLevel = false;
+
+  /**
+   * thermal stables initilization
+   */
+  static BSMPT::ThermalFunctions::ThermalFunctionTables m_thermalTables;
+  static bool m_thermalTablesInitialized;
 
   /**
    * MSBar renormalization scale
