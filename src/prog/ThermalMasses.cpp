@@ -12,8 +12,6 @@
 
 #include <BSMPT/minimizer/Minimizer.h>
 #include <BSMPT/minimum_tracer/minimum_tracer.h> // MinimumTracer
-#include <BSMPT/models/ClassPotentialCPintheDark.h>//EU!!!
-#include <BSMPT/utility/NumericalDerivatives.h>//EU!!!
 #include <BSMPT/models/ClassPotentialOrigin.h>   // for Class_Potential_Origin
 #include <BSMPT/models/IncludeAllModels.h>
 #include <BSMPT/transition_tracer/transition_tracer.h> // TransitionTracer
@@ -21,7 +19,6 @@
 #include <BSMPT/utility/parser.h>
 #include <BSMPT/utility/utility.h>
 #include <algorithm> // for copy, max
-#include <cmath>//EU!!!
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -31,6 +28,8 @@
 #include <string>   // for string, operator<<
 #include <utility>  // for pair
 #include <vector>   // for vector
+#include <BSMPT/utility/NumericalDerivatives.h> //EU!!!
+#include "Eigen/Eigenvalues" //EU!!!
 
 using namespace std;
 using namespace BSMPT;
@@ -54,7 +53,6 @@ struct CLIOptions
   bool good() const;
 };
 
-
 BSMPT::parser prepare_parser();
 
 std::vector<std::string> convert_input(int argc, char *argv[]);
@@ -76,7 +74,7 @@ try
   {
     Logger::Write(LoggingLevel::Default,
                   "Input file " + args.inputfile + " not found ");
-    return EXIT_FAILURE; 
+    return EXIT_FAILURE;
   }
 
   Logger::Write(LoggingLevel::ProgDetailed, "Found file");
@@ -87,7 +85,7 @@ try
   Logger::Write(LoggingLevel::ProgDetailed, "Created modelpointer ");
 
   std::string linestr, linestr_store;
-  int linecounter = 1;
+  int linecounter = 1, filecounter = 1;
 
   while (getline(infile, linestr))
   {
@@ -101,7 +99,7 @@ try
                     "Currently at line " + std::to_string(linecounter));
 
       std::string outfilename =
-          args.outputfile /*+ "_" + std::to_string(filecounter)*/ + ".tsv";
+          args.outputfile + "_" + std::to_string(filecounter) + ".tsv";
       Logger::Write(LoggingLevel::ProgDetailed,
                     "Creating outfile with name " + outfilename);
       std::ofstream outfile(outfilename);
@@ -112,33 +110,10 @@ try
         return EXIT_FAILURE;
       }
 
-      constexpr int OutputDecimalPlaces = 19;
-      outfile << std::fixed << std::setprecision(OutputDecimalPlaces);
-
       modelPointer->setUseIndexCol(linestr_store);
 
       std::pair<std::vector<double>, std::vector<double>> parameters =
           modelPointer->initModel(linestr);
-
-
-
-        //---------------EU!!!
-        double T_high = args.temphigh;
-        int N_points = args.npoints;
-        if (args.Model == ModelID::ModelIDs::CPINTHEDARK)
-          {
-          auto CPiDModel =
-            std::dynamic_pointer_cast<Models::Class_Potential_CPintheDark>(
-              modelPointer);
-          if (not CPiDModel){
-            throw std::runtime_error(
-              "Failed to cast model to Class_Potential_CPintheDark.");
-          }
-
-          T_high = std::max(std::sqrt(CPiDModel->mSs)/10.,300.);
-          N_points = (int) T_high;
-        }
-        //---------------EU!!!
 
       modelPointer->write();
 
@@ -147,39 +122,73 @@ try
       std::shared_ptr<MinimumTracer> MinTracer(new MinimumTracer(
           modelPointer, args.WhichMinimizer, args.UseMultithreading));
 
-      // NLO stability check
-      bool nlostable = modelPointer->CheckNLOVEV(
-          MinTracer->ConvertToVEVDim(MinTracer->GetGlobalMinimum(0)));
-      StatusNLOStability status_nlostable =
-          MinTracer->GetStatusNLOVEV(nlostable);
-      Logger::Write(LoggingLevel::ProgDetailed,
-                    "Status of NLO stability check is: " +
-                        StatusNLOStabilityToString.at(status_nlostable));
 
-      // EWSR check
-      double EWSymmetryRestoration_status = 0;
-      StatusEWSR status_ewsr              = StatusEWSR::Off;
 
-      if (args.CheckEWSymmetryRestoration > 0)
+      // take only relevant lines from linestring
+      // linestr_store;  linestr;
+      //
+      std::stringstream linstor(linestr_store);
+      std::stringstream linstr(linestr);
+
+      std::vector<std::string> linstor_vec;
+      std::vector<std::string> linstr_vec;
+
+      std::string tmpstring;
+      while (linstor >> tmpstring){linstor_vec.push_back(tmpstring);}
+      while (linstr >> tmpstring){linstr_vec.push_back(tmpstring);}
+
+      std::string save_head = "";
+      std::string save_numb = "";
+      std::vector<std::string> wanted_header = {"L1","L2","L3","L4","L5","L6","L7","L8","Tr","Ti","m22sq","mssq"};
+      for (std::size_t ij = 0; ij < linstor_vec.size(); ij++)
       {
-        EWSymmetryRestoration_status =
-            MinTracer->IsThereEWSymmetryRestoration();
-        status_ewsr = MinTracer->GetStatusEWSR(EWSymmetryRestoration_status);
+          bool addstring = 0;
+          for (std::size_t ijk =0; ijk < wanted_header.size(); ijk++)
+              addstring += (linstor_vec.at(ij) == wanted_header.at(ijk));
+          if (addstring)
+          {
+              save_head += linstor_vec.at(ij) + "\t";
+              save_numb += linstr_vec.at(ij+1) + "\t"; //bc/ of index
+          }
+
+
       }
-      else
-      {
-        Logger::Write(LoggingLevel::ProgDetailed,
-                      "Check for EW symmetry restoration is disabled.\n");
-      }
+
+      // // NLO stability check
+      // bool nlostable = modelPointer->CheckNLOVEV(
+      //     MinTracer->ConvertToVEVDim(MinTracer->GetGlobalMinimum(0)));
+      // StatusNLOStability status_nlostable =
+      //     MinTracer->GetStatusNLOVEV(nlostable);
+      // Logger::Write(LoggingLevel::ProgDetailed,
+      //               "Status of NLO stability check is: " +
+      //                   StatusNLOStabilityToString.at(status_nlostable));
+
+      // // EWSR check
+      // double EWSymmetryRestoration_status = 0;
+      // StatusEWSR status_ewsr              = StatusEWSR::Off;
+
+      // if (args.CheckEWSymmetryRestoration > 0)
+      // {
+      //   EWSymmetryRestoration_status =
+      //       MinTracer->IsThereEWSymmetryRestoration();
+      //   status_ewsr = MinTracer->GetStatusEWSR(EWSymmetryRestoration_status);
+      // }
+      // else
+      // {
+      //   Logger::Write(LoggingLevel::ProgDetailed,
+      //                 "Check for EW symmetry restoration is disabled.\n");
+      // }
 
       // phase tracking
       Logger::Write(
           LoggingLevel::ProgDetailed,
           "Track phases in between T_low = " + std::to_string(args.templow) +
-              " and T_high = " + std::to_string(T_high)); //EU!!! args.temphigh
+              " and T_high = " + std::to_string(args.temphigh));
+
+      //bool do_only_tracing = true;
 
       Vacuum vac(args.templow,
-                 T_high, //EU!!! args.temphigh
+                 args.temphigh,
                  MinTracer,
                  modelPointer,
                  args.UseMultiStepPTMode,
@@ -192,56 +201,93 @@ try
                         StatusTracingToString.at(vac.status_vacuum) +
                         ".\n-------------------------------");
 
-      if (vac.PhasesList.size() != 2)
+      if ((vac.PhasesList.size() != 2) and (vac.PhasesList.size() != 1))
         throw std::runtime_error(
             "This code is not ready for handling anything other than "
             "two phases!\n");
 
+
       // prepare legend
       std::vector<std::string> LegendMinima;
-      LegendMinima.push_back("status_nlo_stability");
-      LegendMinima.push_back("status_ewsr");
+      //LegendMinima.push_back("status_nlo_stability");
+      //LegendMinima.push_back("status_ewsr");
       LegendMinima.push_back("status_tracing");
-
-      LegendMinima.push_back("Temp");                                     //EU!!! T -> Temp
-      for (std::size_t j = 0; j < modelPointer->get_nVEV(); j++)
-        LegendMinima.push_back(modelPointer->addLegendVEV().at(j));
-      // for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++)     //EU!!! commented this
-      //   LegendMinima.push_back("mS_" + to_string(j));
-      for (std::size_t j = 0; j < modelPointer->get_NLepton(); j++)
-        LegendMinima.push_back("mL_" + to_string(j));
-      for (std::size_t j = 0; j < modelPointer->get_NQuarks(); j++)
-        LegendMinima.push_back("mQ_" + to_string(j));
-      for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
-        LegendMinima.push_back("mG_" + to_string(j));
-      for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
-        LegendMinima.push_back("mG_TH_" + to_string(j));
-      //LegendMinima.push_back("Veff(v,T)");
-
-      //---------EU!!!--------------
-      LegendMinima.push_back("PI_" + to_string(0) + "x" + to_string(0) );
-      LegendMinima.push_back("PI_" + to_string(3) + "x" + to_string(3) );
-      LegendMinima.push_back("PI_" + to_string(4) + "x" + to_string(4) );
-      LegendMinima.push_back("PI_" + to_string(5) + "x" + to_string(5) );
-      for (std::size_t j = 6; j < modelPointer->get_NHiggs(); j++){ 
-        for (std::size_t i = 6; i < modelPointer->get_NHiggs(); i++){
-          LegendMinima.push_back("PI_" + to_string(j) + "x" + to_string(i) );
-        }
-      } 
-      LegendMinima.push_back("d2Veff_" + to_string(0) + "x" + to_string(0) );
-      LegendMinima.push_back("d2Veff_" + to_string(3) + "x" + to_string(3) );
-      LegendMinima.push_back("d2Veff_" + to_string(4) + "x" + to_string(4) );
-      LegendMinima.push_back("d2Veff_" + to_string(5) + "x" + to_string(5) );
-      for (std::size_t j = 6; j < modelPointer->get_NHiggs(); j++){ 
-        for (std::size_t i = 6; i < modelPointer->get_NHiggs(); i++){
-          LegendMinima.push_back("d2Veff_" + to_string(j) + "x" + to_string(i) );
-        }
-      } 
       LegendMinima.push_back("Tcrit");
 
+
+      LegendMinima.push_back("Temp");
+
+      for (std::size_t j = 0; j < modelPointer->get_nVEV(); j++)
+        LegendMinima.push_back(modelPointer->addLegendVEV().at(j));
+      // only v dependent masses
+      for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++)
+        LegendMinima.push_back("mS_" + to_string(j) + "sq");
+      // v and T dependent masses
+      // for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++)
+      //   LegendMinima.push_back("mS_" + to_string(j) + "sq_T");
+      for (std::size_t j = 0; j < modelPointer->get_NLepton(); j++)
+        LegendMinima.push_back("mL_" + to_string(j) + "sq");
+      for (std::size_t j = 0; j < modelPointer->get_NQuarks(); j++)
+        LegendMinima.push_back("mQ_" + to_string(j) + "sq");
+      // only v dependent masses
+      for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
+        LegendMinima.push_back("mG_" + to_string(j) + "sq");
+      // v and T dependent masses
+      for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
+        LegendMinima.push_back("mG_" + to_string(j) + "sq_T");
+
+      /*
+      for (std::size_t j = 0; j < 3; j++){
+        for (std::size_t k = 0; k < 3; k++)
+          LegendMinima.push_back("MS_" + to_string(j) + to_string(k));
+      }
+      // Hessian diagonals
+      for (std::size_t j = 0; j < 3; j++){
+        for (std::size_t k = 0; k < 3; k++)
+          LegendMinima.push_back("VeffHess_" + to_string(j)+ to_string(k));
+      }
+      */
+      // // Rotation Matrix before checking of convention
+      // for (std::size_t j = 0; j < 3; j++){
+      //   for (std::size_t k = 0; k < 3; k++)
+      //     LegendMinima.push_back("Rbf" + to_string(j) + to_string(k));
+      // }
+      // thermal masses
+      LegendMinima.push_back("m_thm_Gmsq");
+      LegendMinima.push_back("m_thm_Gpsq");
+      LegendMinima.push_back("m_thm_G0sq");
+      LegendMinima.push_back("m_thm_Hsmsq");
+      LegendMinima.push_back("m_thm_H1sq");
+      LegendMinima.push_back("m_thm_H2sq");
+      LegendMinima.push_back("m_thm_H3sq");
+      LegendMinima.push_back("m_thm_Hmsq");
+      LegendMinima.push_back("m_thm_Hpsq");
+
+      // potential masses
+      LegendMinima.push_back("m_pot_Gmsq");
+      LegendMinima.push_back("m_pot_Gpsq");
+      LegendMinima.push_back("m_pot_G0sq");
+      LegendMinima.push_back("m_pot_Hsmsq");
+      LegendMinima.push_back("m_pot_H1sq");
+      LegendMinima.push_back("m_pot_H2sq");
+      LegendMinima.push_back("m_pot_H3sq");
+      LegendMinima.push_back("m_pot_Hmsq");
+      LegendMinima.push_back("m_pot_Hpsq");
+
+      // thermal DM-Rotation matrix (this is only for CPintheDark)
+      for (std::size_t j = 0; j < 3; j++){
+        for (std::size_t k = 0; k < 3; k++)
+          LegendMinima.push_back("R_thm_" + to_string(j) + to_string(k));
+      }
+
+      // potential DM-Rotation matrix (this is only for CPintheDark)
+      for (std::size_t j = 0; j < 3; j++){
+        for (std::size_t k = 0; k < 3; k++)
+          LegendMinima.push_back("R_pot_" + to_string(j) + to_string(k));
+      }
+
       LegendMinima.push_back("runtime");
-      outfile << linestr_store << sep 
-              //<< modelPointer->addLegendCT() << sep
+      outfile << save_head << sep //<< modelPointer->addLegendCT() << sep
               << LegendMinima << std::endl;
 
       std::size_t length = 0;
@@ -259,10 +305,11 @@ try
 
       if (length == 0)
       {
-        outfile << linestr;
+        outfile << std::setprecision(16);
+        outfile << save_numb;
         //outfile << sep << parameters.second;
-        outfile << sep << status_nlostable;
-        outfile << sep << status_ewsr;
+        //outfile << sep << status_nlostable;
+        //outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
         auto time = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::high_resolution_clock::now() - start)
@@ -273,30 +320,66 @@ try
         outfile << std::endl;
       }
 
+
       std::vector<double> T_list;
-      for (int n = 0; n < N_points; n++)
+
+      for (int n = 0; n < args.npoints; n++)
         T_list.push_back(args.templow +
-                         n * (T_high - args.templow) / N_points);
+                         n * (args.temphigh - args.templow) / args.npoints);
 
-      T_list.insert(std::lower_bound(T_list.begin(),
-                                     T_list.end(),
-                                     vac.CoexPhasesList.at(0).crit_temp),
-                    vac.CoexPhasesList.at(0).crit_temp);
+      // std::cout << "tcrit=" << vac.CoexPhasesList.at(0).crit_temp << std::endl;
+      double Tcrit = vac.CoexPhasesList.at(0).crit_temp;
+      std::cout << "Tcrit = " << Tcrit << std::endl;
+      if (vac.PhasesList.size() == 2)
+      {
+        T_list.insert(std::lower_bound(T_list.begin(),
+                                      T_list.end(),
+                                      vac.CoexPhasesList.at(0).crit_temp),
+                      vac.CoexPhasesList.at(0).crit_temp);
+      }
 
+
+
+      // these are needed later for correct rotation matrix after symmetry breaking
+
+      double m22sq = modelPointer->Get_Curvature_Higgs_L2().at(7).at(7);
+      double mSsq = modelPointer->Get_Curvature_Higgs_L2().at(8).at(8);
+      double roteps = 1e-2;
+
+      // used for smoothness of rotation matrix
+      // difference
+      bool diagm22sq, diagm22sq_T;
+      // save sign of rotation matrix in relevant elements
+      std::vector<double> rotsgn = {0,0,0};
+      std::vector<double> rotsgn_T = {0,0,0};
+
+      // for every temperature:
       for (const auto T : T_list)
       {
-        outfile << linestr;
+        outfile << std::setprecision(16);
+        outfile << save_numb;
         //outfile << sep << parameters.second;
-        outfile << sep << status_nlostable;
-        outfile << sep << status_ewsr;
+        //outfile << sep << status_nlostable;
+        //outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
+        outfile << sep << Tcrit;
         outfile << sep << T;
 
         std::vector<double> vev;
+        if (T < 0) {break;}
 
-        if (T <= vac.CoexPhasesList.at(0).crit_temp)
+
+
+        if (vac.PhasesList.size() == 2)
         {
-          vev = vac.PhasesList.at(1).Get(T).point;
+          if (T <= vac.CoexPhasesList.at(0).crit_temp)
+          {
+            vev = vac.PhasesList.at(1).Get(T).point;
+          }
+          else
+          {
+            vev = vac.PhasesList.at(0).Get(T).point;
+          }
         }
         else
         {
@@ -304,44 +387,342 @@ try
         }
 
         outfile << sep << vev;
-        auto vevMinOrder = modelPointer->MinimizeOrderVEV(vev);
-        outfile << sep << vector_sqrt(modelPointer->LeptonMassesSquared(vevMinOrder));
-        outfile << sep << vector_sqrt(modelPointer->QuarkMassesSquared(vevMinOrder));
-        outfile << sep << vector_sqrt(modelPointer->GaugeMassesSquared(vevMinOrder, 0));
-        outfile << sep << vector_sqrt(modelPointer->GaugeMassesSquared(vevMinOrder, T));
+        outfile << sep
+                << modelPointer->HiggsMassesSquared(
+                       modelPointer->MinimizeOrderVEV(vev), 0);
+        // outfile << sep
+        //         << modelPointer->HiggsMassesSquared(
+        //                modelPointer->MinimizeOrderVEV(vev), T);
+        outfile << sep
+                << modelPointer->LeptonMassesSquared(
+                       modelPointer->MinimizeOrderVEV(vev));
+        outfile << sep
+                << modelPointer->QuarkMassesSquared(
+                       modelPointer->MinimizeOrderVEV(vev));
+        outfile << sep
+                << modelPointer->GaugeMassesSquared(
+                       modelPointer->MinimizeOrderVEV(vev), 0);
+        outfile << sep
+                << modelPointer->GaugeMassesSquared(
+                       modelPointer->MinimizeOrderVEV(vev), T);
 
-        //const long double veff = modelPointer->VEff(vevMinOrder, T);
-        //outfile << sep << veff;
+
+        // Temperature dependent Higgs Mass-Matrix
+        MatrixXd HiggsMassMatrix = modelPointer->HiggsMassMatrix(modelPointer->MinimizeOrderVEV(vev), T,0);
+        MatrixXd NeutralDSMatrix(3,3);
+
         
-        // Cache HiggsMassMatrix once
-        auto HiggsMassMatrixT = modelPointer->HiggsMassMatrix(vevMinOrder, T);
-        
-        //---------EU!!!--------------
-        outfile << sep << HiggsMassMatrixT(0,0);
-        outfile << sep << HiggsMassMatrixT(3,3);
-        outfile << sep << HiggsMassMatrixT(4,4);
-        outfile << sep << HiggsMassMatrixT(5,5);
-        for (std::size_t j = 6; j < modelPointer->get_NHiggs(); j++){ 
-          for (std::size_t i = 6; i < modelPointer->get_NHiggs(); i++){
-            outfile << sep << HiggsMassMatrixT(j,i);
+        for (std::size_t j = 0; j < 3; j++){
+          for (std::size_t k = 0; k < 3; k++) {
+              NeutralDSMatrix(j,k) = HiggsMassMatrix(6+j,6+k);
+              //outfile << sep << NeutralDSMatrix(j,k);
           }
         }
+        
+        /* --- */
 
-        std::function<double(std::vector<double>)> Vfun =
-            [&](std::vector<double> a) { return modelPointer->VEff(a, T); };
+        // Hessian of Potential - for high masses eps = 10
+        double eps = 10;
 
-        std::vector<std::vector<double>> Hessian =
-            HessianNumerical(vevMinOrder, Vfun, 0.005 * std::max(L2NormVector(vevMinOrder), T));
-        outfile << sep << Hessian[0][0];
-        outfile << sep << Hessian[3][3];
-        outfile << sep << Hessian[4][4];
-        outfile << sep << Hessian[5][5];
-        for (std::size_t j = 6; j < modelPointer->get_NHiggs(); j++){ 
-          for (std::size_t i = 6; i < modelPointer->get_NHiggs(); i++){
-            outfile << sep << Hessian[j][i];
+        // Diagonal Hessian
+        MatrixXd Hessian(modelPointer->get_NHiggs(),modelPointer->get_NHiggs());
+        MatrixXd NeutralDSHessian(3,3);
+
+        // Veff as a function
+        std::function<double(std::vector<double>)> Veff;
+        Veff = [&](std::vector<double> effvev)
+            {return modelPointer->VEff(effvev,T,0);};
+
+        for (std::size_t i = 0; i < modelPointer->get_NHiggs();i++)
+        {
+            // dVeff/dw_i as a function
+            std::function<double(std::vector<double>)> dVeff;
+            dVeff = [&](std::vector<double> effvev)
+                {return NablaNumerical(effvev,Veff,eps).at(i);};
+
+            // set diagonals of Mass Matrix
+            Hessian(i,i) = NablaNumerical(modelPointer->MinimizeOrderVEV(vev),dVeff, eps).at(i);
+
+            // if index reaches neutral DS Mass Matrix -> add offdiagonals;
+            if ((i == 6) || (i == 7))
+            {
+                Hessian(i,8) = NablaNumerical(modelPointer->MinimizeOrderVEV(vev),dVeff, eps).at(8);
+                Hessian(8,i) = Hessian(i,8);
+            }
+        }
+
+        // std::vector<std::vector<double>> TestNumdiff = HessianNablaNumerical(modelPointer->MinimizeOrderVEV(vev),Veff,eps);
+
+        // MatrixXd TestMatrix(modelPointer->get_NHiggs(),modelPointer->get_NHiggs());
+        // for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++){
+        //   for (std::size_t k = 0; k < modelPointer->get_NHiggs(); k++) {
+        //       TestMatrix(j,k) = TestNumdiff.at(j).at(k);
+        //   }
+        // }
+
+        // std::cout << "--- T = " << T << " ---" << std::endl;
+        // std::cout << TestMatrix << std::endl;
+
+
+        
+        for (std::size_t j = 0; j < 3; j++){
+          for (std::size_t k = 0; k < 3; k++) {
+              NeutralDSHessian(j,k) = Hessian(6+j,6+k);
+              //outfile << sep << NeutralDSHessian(j,k);
           }
         }
-        outfile << sep << vac.CoexPhasesList.at(0).crit_temp;
+        
+
+
+        std::vector<double> MassSquaredHiggsTherm(modelPointer->get_NHiggs());
+        std::vector<double> MassSquaredHiggsHessi(modelPointer->get_NHiggs());
+        MatrixXd HiggsRotTherm(3,3);
+        MatrixXd HiggsRotHessi(3,3);
+        std::size_t i_mG0, i_mGm, i_mGp, i_mHsm, i_mH1, i_mH2, i_mH3, i_mHm, i_mHp;
+        std::size_t i_mG0_T, i_mGm_T, i_mGp_T, i_mHsm_T, i_mH1_T, i_mH2_T, i_mH3_T, i_mHm_T, i_mHp_T;
+
+        if (T < Tcrit)//(vev.at(0) > 1e-2)
+        {
+            Eigen::SelfAdjointEigenSolver<MatrixXd> es;
+
+            es.compute(Hessian, Eigen::EigenvaluesOnly);
+            // eigenvalues
+            for (std::size_t i = 0; i < modelPointer->get_NHiggs(); i++)
+                MassSquaredHiggsHessi[i] = es.eigenvalues()[i];
+
+            es.compute(HiggsMassMatrix, Eigen::EigenvaluesOnly);
+            // eigenvalues
+            for (std::size_t i = 0; i < modelPointer->get_NHiggs(); i++)
+                MassSquaredHiggsTherm[i] = es.eigenvalues()[i];
+
+            // this is known from mHsm << Dark Sector masses
+            // (and DM can't be charged)
+            i_mG0 = 0; i_mGm = 1; i_mGp = 2; i_mHsm = 3; i_mH1 = 4;
+
+            // calculation of order of Higgs particles
+            double tmpmass = MassSquaredHiggsHessi[5];
+
+            i_mHp = 6;
+
+            while (i_mHp<8){
+            if (std::abs(tmpmass - MassSquaredHiggsHessi[i_mHp]) < 1) {break;}
+            else {tmpmass = MassSquaredHiggsHessi[i_mHp];}
+            i_mHp++;
+            }
+
+            if      (i_mHp==6){i_mH2 = 7; i_mH3 = 8;}
+            else if (i_mHp==7){i_mH2 = 5; i_mH3 = 8;}
+            else if (i_mHp==8){i_mH2 = 5; i_mH3 = 6;}
+
+            i_mHm = i_mHp - 1;
+
+            // for thermal rotation
+            // this is known from mHsm << Dark Sector masses
+            // (and DM can't be charged)
+            i_mG0_T = 0; i_mGm_T = 1; i_mGp_T = 2; i_mHsm_T = 3; i_mH1_T = 4;
+
+            // calculation of order of Higgs particles
+            tmpmass = MassSquaredHiggsTherm[5];
+
+            i_mHp_T = 6;
+
+            while (i_mHp_T<8){
+            if (std::abs(tmpmass - MassSquaredHiggsTherm[i_mHp_T]) < 1) {break;}
+            else {tmpmass = MassSquaredHiggsTherm[i_mHp_T];}
+            i_mHp_T++;
+            }
+
+            if      (i_mHp_T==6){i_mH2_T = 7; i_mH3_T = 8;}
+            else if (i_mHp_T==7){i_mH2_T = 5; i_mH3_T = 8;}
+            else if (i_mHp_T==8){i_mH2_T = 5; i_mH3_T = 6;}
+
+            i_mHm_T = i_mHp_T - 1;
+
+
+            // Diagonalisation of DM-Mass Matrix
+            es.compute(NeutralDSHessian);
+            HiggsRotHessi = es.eigenvectors().transpose();
+            es.compute(NeutralDSMatrix);
+            HiggsRotTherm = es.eigenvectors().transpose();
+
+            // Set correct parametrisation
+            if (HiggsRotHessi(0,0) < 0)          {HiggsRotHessi.row(0) *= -1;}
+            if (HiggsRotHessi(2,2) < 0)          {HiggsRotHessi.row(2) *= -1;}
+            if (HiggsRotHessi.determinant() < 0) {HiggsRotHessi.row(1) *= -1;}
+
+            if (HiggsRotTherm(0,0) < 0)          {HiggsRotTherm.row(0) *= -1;}
+            if (HiggsRotTherm(2,2) < 0)          {HiggsRotTherm.row(2) *= -1;}
+            if (HiggsRotTherm.determinant() < 0) {HiggsRotTherm.row(1) *= -1;}
+
+            // save diagonalisation for smoothness of matrix values
+            // before phase transition
+
+            if (mSsq < m22sq)
+            {
+                rotsgn.at(2) = std::copysign(1.,HiggsRotHessi(0,2));
+                if ( std::abs(HiggsRotHessi(1,0)) -1 < roteps )
+                {
+                    diagm22sq = 1;
+                    rotsgn.at(0) = std::copysign(1.,HiggsRotHessi(1,0));
+                    rotsgn.at(1) = std::copysign(1.,HiggsRotHessi(2,1));
+                }
+                else if ( std::abs(HiggsRotHessi(1,1)) -1 < roteps )
+                {
+                    diagm22sq = 0;
+                    rotsgn.at(0) = std::copysign(1.,HiggsRotHessi(1,1));
+                    rotsgn.at(1) = std::copysign(1.,HiggsRotHessi(2,0));
+                }
+            }
+            else
+            {
+                rotsgn.at(2) = std::copysign(1.,HiggsRotHessi(2,2));
+                if ( std::abs(HiggsRotHessi(0,0)) -1 < roteps )
+                {
+                    diagm22sq = 1;
+                    rotsgn.at(0) = std::copysign(1.,HiggsRotHessi(0,0));
+                    rotsgn.at(1) = std::copysign(1.,HiggsRotHessi(1,1));
+                }
+                else if ( std::abs(HiggsRotHessi(0,1)) -1 < roteps )
+                {
+                    diagm22sq = 0;
+                    rotsgn.at(0) = std::copysign(1.,HiggsRotHessi(0,1));
+                    rotsgn.at(1) = std::copysign(1.,HiggsRotHessi(1,0));
+                }
+            }
+
+            // same for thermal masses
+            if (mSsq < m22sq)
+            {
+                rotsgn_T.at(2) = std::copysign(1.,HiggsRotTherm(0,2));
+                if ( std::abs(HiggsRotTherm(1,0)) -1 < roteps )
+                {
+                    diagm22sq_T = 1;
+                    rotsgn_T.at(0) = std::copysign(1.,HiggsRotTherm(1,0));
+                    rotsgn_T.at(1) = std::copysign(1.,HiggsRotTherm(2,1));
+                }
+                else if ( std::abs(HiggsRotTherm(1,1)) -1 < roteps )
+                {
+                    diagm22sq_T = 0;
+                    rotsgn_T.at(0) = std::copysign(1.,HiggsRotTherm(1,1));
+                    rotsgn_T.at(1) = std::copysign(1.,HiggsRotTherm(2,0));
+                }
+            }
+            else
+            {
+                rotsgn_T.at(2) = std::copysign(1.,HiggsRotTherm(2,2));
+                if ( std::abs(HiggsRotTherm(0,0)) -1 < roteps )
+                {
+                    diagm22sq_T = 1;
+                    rotsgn_T.at(0) = std::copysign(1.,HiggsRotTherm(0,0));
+                    rotsgn_T.at(1) = std::copysign(1.,HiggsRotTherm(1,1));
+                }
+                else if ( std::abs(HiggsRotTherm(0,1)) -1 < roteps )
+                {
+                    diagm22sq_T = 0;
+                    rotsgn_T.at(0) = std::copysign(1.,HiggsRotTherm(0,1));
+                    rotsgn_T.at(1) = std::copysign(1.,HiggsRotTherm(1,0));
+                }
+            }
+
+
+
+        }
+        else
+        {
+            for (std::size_t i = 0; i <modelPointer->get_NHiggs(); i++)
+                MassSquaredHiggsHessi.at(i) = Hessian(i,i);
+            for (std::size_t i = 0; i <modelPointer->get_NHiggs(); i++)
+                MassSquaredHiggsTherm.at(i) = HiggsMassMatrix(i,i);
+
+            // per definition / doesn't matter
+            i_mGm=0;i_mGp=1;i_mG0=5; i_mHm = 2; i_mHp = 3; i_mHsm = 4;
+            i_mGm_T=0;i_mGp_T=1;i_mG0_T=5; i_mHm_T = 2; i_mHp_T = 3; i_mHsm_T = 4;
+
+            // rotation matrix with smooth swith;
+            if (mSsq < m22sq)
+            {
+                i_mH1 = 8; i_mH1_T = 8;
+                if (diagm22sq)
+                {
+                    HiggsRotHessi << 0, 0, rotsgn.at(2), rotsgn.at(0), 0, 0, 0, rotsgn.at(1), 0;
+                    i_mH2 = 6; i_mH3 = 7;
+                }
+                else
+                {
+                    HiggsRotHessi << 0, 0, rotsgn.at(2), 0, rotsgn.at(1), 0, rotsgn.at(0), 0, 0;
+                    i_mH2 = 7; i_mH3 = 6;
+                }
+                if (diagm22sq_T)
+                {
+                    HiggsRotTherm << 0, 0, rotsgn_T.at(2), rotsgn_T.at(0), 0, 0, 0, rotsgn_T.at(1), 0;
+                    i_mH2_T = 6; i_mH3_T = 7;
+                }
+                else
+                {
+                    HiggsRotTherm << 0, 0, rotsgn_T.at(2), 0, rotsgn_T.at(1), 0, rotsgn_T.at(0), 0, 0;
+                    i_mH2_T = 7; i_mH3_T = 6;
+                }
+            }
+            else
+            {
+                i_mH3 = 8; i_mH3_T = 8;
+                if (diagm22sq)
+                {
+                    HiggsRotHessi << rotsgn.at(0), 0, 0, 0, rotsgn.at(1), 0, 0, 0, rotsgn.at(2);
+                    i_mH1 = 6; i_mH2 = 7;
+                }
+                else
+                {
+                    HiggsRotHessi << 0, rotsgn.at(1), 0, rotsgn.at(0), 0, 0, 0, 0, rotsgn.at(2);
+                    i_mH1 = 7; i_mH2 = 6;
+                }
+                if (diagm22sq_T)
+                {
+                    HiggsRotTherm << rotsgn_T.at(0), 0, 0, 0, rotsgn_T.at(1), 0, 0, 0, rotsgn_T.at(2);
+                    i_mH1_T = 6; i_mH2_T = 7;
+                }
+                else
+                {
+                    HiggsRotTherm << 0, rotsgn_T.at(1), 0, rotsgn_T.at(0), 0, 0, 0, 0, rotsgn_T.at(2);
+                    i_mH1_T = 7; i_mH2_T = 6;
+                }
+            }
+        }
+
+        // thermal masses
+        outfile << sep << MassSquaredHiggsTherm[i_mG0_T];
+        outfile << sep << MassSquaredHiggsTherm[i_mGm_T];
+        outfile << sep << MassSquaredHiggsTherm[i_mGp_T];
+        outfile << sep << MassSquaredHiggsTherm[i_mHsm_T];
+        outfile << sep << MassSquaredHiggsTherm[i_mH1_T];
+        outfile << sep << MassSquaredHiggsTherm[i_mH2_T];
+        outfile << sep << MassSquaredHiggsTherm[i_mH3_T];
+        outfile << sep << MassSquaredHiggsTherm[i_mHm_T];
+        outfile << sep << MassSquaredHiggsTherm[i_mHp_T];
+
+        // potential masses
+        outfile << sep << MassSquaredHiggsHessi[i_mG0];
+        outfile << sep << MassSquaredHiggsHessi[i_mGm];
+        outfile << sep << MassSquaredHiggsHessi[i_mGp];
+        outfile << sep << MassSquaredHiggsHessi[i_mHsm];
+        outfile << sep << MassSquaredHiggsHessi[i_mH1];
+        outfile << sep << MassSquaredHiggsHessi[i_mH2];
+        outfile << sep << MassSquaredHiggsHessi[i_mH3];
+        outfile << sep << MassSquaredHiggsHessi[i_mHm];
+        outfile << sep << MassSquaredHiggsHessi[i_mHp];
+
+        for (std::size_t j = 0; j < 3; j++){
+          for (std::size_t k = 0; k < 3; k++){
+          outfile << sep
+                  << HiggsRotTherm(j,k) ;}
+        }
+
+        for (std::size_t j = 0; j < 3; j++){
+          for (std::size_t k = 0; k < 3; k++){
+          outfile << sep
+                  << HiggsRotHessi(j,k) ;}
+        }
+
         auto time = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::high_resolution_clock::now() - start)
                         .count() /
@@ -351,6 +732,7 @@ try
         outfile << std::endl;
       }
 
+      filecounter++;
       outfile.close();
 
       auto time = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -412,6 +794,7 @@ bool CLIOptions::good() const
     Logger::Write(LoggingLevel::Default, "line not set.");
     return false;
   }
+
   if (templow >= temphigh)
   {
     Logger::Write(LoggingLevel::Default,
@@ -422,11 +805,6 @@ bool CLIOptions::good() const
   {
     Logger::Write(LoggingLevel::Default,
                   "Invalid npoints choice. npoints has to be > 0.");
-    return false;
-  }
-  if (num_check_pts < 0)
-  {
-    Logger::Write(LoggingLevel::Default, "Invalid choice for num_check_pts.");
     return false;
   }
   if (CheckEWSymmetryRestoration > 2 or CheckEWSymmetryRestoration < 0)
@@ -460,7 +838,7 @@ CLIOptions::CLIOptions(const BSMPT::parser &argparser)
   {
     ss << "--thigh not set, using default value: " << temphigh << "\n";
   }
-  
+
   try
   {
     npoints = argparser.get_value<double>("npoints");
