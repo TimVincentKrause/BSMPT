@@ -339,7 +339,48 @@ try
       }
 
 
+      // Determine end of phase tranisiton evolution
+      //
 
+      // double eps = 0.2;
+      // double T246 = -1;
+
+
+      // std::vector<double> vevi,vevii,veviii;
+      // for (std::size_t i = 0; i < T_list.size(); i++) {
+      //     if (vac.PhasesList.size() == 2)
+      //     {
+      //       if (T_list.at(i) <= vac.CoexPhasesList.at(0).crit_temp)
+      //       { vevi = vac.PhasesList.at(1).Get(T_list.at(i)).point; }
+      //       else
+      //       { vevi = vac.PhasesList.at(0).Get(T_list.at(i)).point; }
+
+      //       if (T_list.at(i+1) <= vac.CoexPhasesList.at(0).crit_temp)
+      //       { vevi = vac.PhasesList.at(1).Get(T_list.at(i+1)).point; }
+      //       else
+      //       { vevi = vac.PhasesList.at(0).Get(T_list.at(i+1)).point; }
+
+      //       if (T_list.at(i+2) <= vac.CoexPhasesList.at(0).crit_temp)
+      //       { vevii = vac.PhasesList.at(1).Get(T_list.at(i+2)).point; }
+      //       else
+      //       { vevii = vac.PhasesList.at(0).Get(T_list.at(i+2)).point; }
+      //     }
+      //     else
+      //     {
+      //       vevi = vac.PhasesList.at(0).Get(T_list.at(i)).point;
+      //       vevii = vac.PhasesList.at(0).Get(T_list.at(i+1)).point;
+      //       veviii = vac.PhasesList.at(0).Get(T_list.at(i+2)).point;
+      //     }
+
+
+      //     if ((std::abs(vevi.at(0)-246.2) < eps) and (std::abs(vevii.at(0)-246.2) < eps) and (std::abs(veviii.at(0)-246.2) < eps))
+      //     {
+      //         T246 = T_list.at(i);
+      //     }
+
+      // }
+
+      // std::cout << "T246 = " << T246 << std::endl;
       // std::vector<double> vev = vac.PhasesList.at(1).Get(0).point;
 
       // std::vector<double> mHiggsT0 = modelPointer->HiggsMassesSquared(
@@ -523,7 +564,7 @@ try
             // std::cout << "nmass = " << MassSquaredHiggsHessi[i_mHp] << std::endl;
             // std::cout << "diff = " << std::abs(tmpmass - MassSquaredHiggsHessi[i_mHp])/MassSquaredHiggsHessi[i_mHp] << std::endl;
 
-            if (std::abs(tmpmass - MassSquaredHiggsHessi[i_mHp])/MassSquaredHiggsHessi[i_mHp] < 1e-8) {break;}
+            if (std::abs(tmpmass - MassSquaredHiggsHessi[i_mHp])/MassSquaredHiggsHessi[i_mHp] < 1e-6) {break;}
             else {tmpmass = MassSquaredHiggsHessi[i_mHp];}
             i_mHp++;
             }
@@ -753,6 +794,7 @@ try
         // std::cout << HiggsRotHessi << std::endl;
 
         // thermal masses
+
         outfile << sep << MassSquaredHiggsTherm[i_mG0_T];
         outfile << sep << MassSquaredHiggsTherm[i_mGm_T];
         outfile << sep << MassSquaredHiggsTherm[i_mGp_T];
