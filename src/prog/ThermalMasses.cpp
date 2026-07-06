@@ -564,7 +564,7 @@ try
             // std::cout << "nmass = " << MassSquaredHiggsHessi[i_mHp] << std::endl;
             // std::cout << "diff = " << std::abs(tmpmass - MassSquaredHiggsHessi[i_mHp])/MassSquaredHiggsHessi[i_mHp] << std::endl;
 
-            if (std::abs(tmpmass - MassSquaredHiggsHessi[i_mHp])/MassSquaredHiggsHessi[i_mHp] < 1e-6) {break;}
+            if (std::abs(tmpmass - MassSquaredHiggsHessi[i_mHp])/MassSquaredHiggsHessi[i_mHp] < 1e-5) {break;}
             else {tmpmass = MassSquaredHiggsHessi[i_mHp];}
             i_mHp++;
             }
@@ -591,7 +591,7 @@ try
             i_mHp_T = 6;
 
             while (i_mHp_T<8){
-            if (std::abs(tmpmass - MassSquaredHiggsTherm[i_mHp_T]) < 1e-10) {break;}
+            if (std::abs(tmpmass - MassSquaredHiggsTherm[i_mHp_T]) < 1e-5) {break;}
             else {tmpmass = MassSquaredHiggsTherm[i_mHp_T];}
             i_mHp_T++;
             }
