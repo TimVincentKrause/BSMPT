@@ -699,9 +699,9 @@ try
                 if (HiggsRotHessiv2(2,2) < 0)          {HiggsRotHessiv2.row(2) *= -1;}
                 if (HiggsRotHessiv2.determinant() < 0) {HiggsRotHessiv2.row(1) *= -1;}
 
-                std::cout << "T = " << T << std::endl;
-                std::cout << NeutralDSHessian << std::endl;
-                std::cout << HiggsRotHessiv2 << std::endl;
+                // std::cout << "T = " << T << std::endl;
+                // std::cout << NeutralDSHessian << std::endl;
+                // std::cout << HiggsRotHessiv2 << std::endl;
 
                 if (mSsq < m22sq)
                 {
@@ -741,7 +741,7 @@ try
                 }
                 rotsgn_T = rotsgn;
                 diagm22sq_T = diagm22sq;
-                std::cout << "rotsgn = " << rotsgn << std::endl;
+                //std::cout << "rotsgn = " << rotsgn << std::endl;
 
 
             }
