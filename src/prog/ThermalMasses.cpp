@@ -154,30 +154,30 @@ try
 
       }
 
-      // // NLO stability check
-      // bool nlostable = modelPointer->CheckNLOVEV(
-      //     MinTracer->ConvertToVEVDim(MinTracer->GetGlobalMinimum(0)));
-      // StatusNLOStability status_nlostable =
-      //     MinTracer->GetStatusNLOVEV(nlostable);
-      // Logger::Write(LoggingLevel::ProgDetailed,
-      //               "Status of NLO stability check is: " +
-      //                   StatusNLOStabilityToString.at(status_nlostable));
+      // NLO stability check
+      bool nlostable = modelPointer->CheckNLOVEV(
+          MinTracer->ConvertToVEVDim(MinTracer->GetGlobalMinimum(0)));
+      StatusNLOStability status_nlostable =
+          MinTracer->GetStatusNLOVEV(nlostable);
+      Logger::Write(LoggingLevel::ProgDetailed,
+                    "Status of NLO stability check is: " +
+                        StatusNLOStabilityToString.at(status_nlostable));
 
-      // // EWSR check
-      // double EWSymmetryRestoration_status = 0;
-      // StatusEWSR status_ewsr              = StatusEWSR::Off;
+      // EWSR check
+      double EWSymmetryRestoration_status = 0;
+      StatusEWSR status_ewsr              = StatusEWSR::Off;
 
-      // if (args.CheckEWSymmetryRestoration > 0)
-      // {
-      //   EWSymmetryRestoration_status =
-      //       MinTracer->IsThereEWSymmetryRestoration();
-      //   status_ewsr = MinTracer->GetStatusEWSR(EWSymmetryRestoration_status);
-      // }
-      // else
-      // {
-      //   Logger::Write(LoggingLevel::ProgDetailed,
-      //                 "Check for EW symmetry restoration is disabled.\n");
-      // }
+      if (args.CheckEWSymmetryRestoration > 0)
+      {
+        EWSymmetryRestoration_status =
+            MinTracer->IsThereEWSymmetryRestoration();
+        status_ewsr = MinTracer->GetStatusEWSR(EWSymmetryRestoration_status);
+      }
+      else
+      {
+        Logger::Write(LoggingLevel::ProgDetailed,
+                      "Check for EW symmetry restoration is disabled.\n");
+      }
 
       // phase tracking
       Logger::Write(
@@ -209,8 +209,8 @@ try
 
       // prepare legend
       std::vector<std::string> LegendMinima;
-      //LegendMinima.push_back("status_nlo_stability");
-      //LegendMinima.push_back("status_ewsr");
+      LegendMinima.push_back("status_nlo_stability");
+      LegendMinima.push_back("status_ewsr");
       LegendMinima.push_back("status_tracing");
       LegendMinima.push_back("Tcrit");
 
@@ -308,8 +308,8 @@ try
         outfile << std::setprecision(16);
         outfile << save_numb;
         //outfile << sep << parameters.second;
-        //outfile << sep << status_nlostable;
-        //outfile << sep << status_ewsr;
+        outfile << sep << status_nlostable;
+        outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
         auto time = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::high_resolution_clock::now() - start)
@@ -410,8 +410,8 @@ try
         outfile << std::setprecision(16);
         outfile << save_numb;
         //outfile << sep << parameters.second;
-        //outfile << sep << status_nlostable;
-        //outfile << sep << status_ewsr;
+        outfile << sep << status_nlostable;
+        outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
         outfile << sep << Tcrit;
         outfile << sep << T;
@@ -519,6 +519,10 @@ try
         for (std::size_t j = 0; j < 3; j++){
           for (std::size_t k = 0; k < 3; k++) {
               NeutralDSHessian(j,k) = Hessian(6+j,6+k);
+              if (((j == 0) and (k == 1)) or ((j == 1) and (k == 0))){
+                  NeutralDSHessian(j,k) = 0;
+
+              }
               //outfile << sep << NeutralDSHessian(j,k);
           }
         }
@@ -607,14 +611,41 @@ try
             es.compute(NeutralDSMatrix);
             HiggsRotTherm = es.eigenvectors().transpose();
 
+            // std::cout << "T = " << T << std::endl;
+
+
+            // std::cout << "NeutralDSHessian" << std::endl;
+            // std::cout << NeutralDSHessian << std::endl;
+
+
+
+            // std::cout << "HiggsRotHessi - before " << std::endl;
+            // std::cout << HiggsRotHessi << std::endl;
+
             // Set correct parametrisation
             if (HiggsRotHessi(0,0) < 0)          {HiggsRotHessi.row(0) *= -1;}
+
+            // std::cout << "HiggsRotHessi - 0 check " << std::endl;
+            // std::cout << HiggsRotHessi << std::endl;
+
             if (HiggsRotHessi(2,2) < 0)          {HiggsRotHessi.row(2) *= -1;}
+
+            // std::cout << "HiggsRotHessi - 2 check " << std::endl;
+            // std::cout << HiggsRotHessi << std::endl;
+
+
             if (HiggsRotHessi.determinant() < 0) {HiggsRotHessi.row(1) *= -1;}
+
+            // std::cout << "HiggsRotHessi - 2 check " << std::endl;
+            // std::cout << HiggsRotHessi << std::endl;
+
 
             if (HiggsRotTherm(0,0) < 0)          {HiggsRotTherm.row(0) *= -1;}
             if (HiggsRotTherm(2,2) < 0)          {HiggsRotTherm.row(2) *= -1;}
             if (HiggsRotTherm.determinant() < 0) {HiggsRotTherm.row(1) *= -1;}
+
+            // std::cout << "HiggsRotHessi" << std::endl;
+            // std::cout << HiggsRotHessi << std::endl;
 
             // std::cout << " --- T =  " << T << " --- " << std::endl;
             // std::cout << "RotHessi - v " << std::endl;
@@ -668,19 +699,23 @@ try
                 if (HiggsRotHessiv2(2,2) < 0)          {HiggsRotHessiv2.row(2) *= -1;}
                 if (HiggsRotHessiv2.determinant() < 0) {HiggsRotHessiv2.row(1) *= -1;}
 
-                // std::cout << "T = " << T << std::endl;
-                // std::cout << NeutralDSHessian << std::endl;
+                std::cout << "T = " << T << std::endl;
+                std::cout << NeutralDSHessian << std::endl;
+                std::cout << HiggsRotHessiv2 << std::endl;
 
                 if (mSsq < m22sq)
                 {
                     rotsgn.at(2) = std::copysign(1.,HiggsRotHessiv2(0,2));
-                    if ( std::abs(std::abs(HiggsRotHessiv2(1,0)) -1) < roteps )
+
+                    double max_element = std::max(std::abs(HiggsRotHessiv2(1,0)),std::abs(HiggsRotHessiv2(1,1)));
+
+                    if ( max_element == std::abs(HiggsRotHessiv2(1,0)))
                     {
                         diagm22sq = 1;
                         rotsgn.at(0) = std::copysign(1.,HiggsRotHessiv2(1,0));
                         rotsgn.at(1) = std::copysign(1.,HiggsRotHessiv2(2,1));
                     }
-                    else if ( std::abs(std::abs(HiggsRotHessiv2(1,1)) -1) < roteps )
+                    else if ( max_element == std::abs(HiggsRotHessiv2(1,1)))
                     {
                         diagm22sq = 0;
                         rotsgn.at(0) = std::copysign(1.,HiggsRotHessiv2(1,1));
@@ -690,13 +725,14 @@ try
                 else
                 {
                     rotsgn.at(2) = std::copysign(1.,HiggsRotHessiv2(2,2));
-                    if ( std::abs(std::abs(HiggsRotHessiv2(0,0)) -1) < roteps )
+                    double max_element = std::max(std::abs(HiggsRotHessiv2(0,0)),std::abs(HiggsRotHessiv2(0,1)));
+                    if ( max_element == std::abs(HiggsRotHessiv2(0,0)))
                     {
                         diagm22sq = 1;
                         rotsgn.at(0) = std::copysign(1.,HiggsRotHessiv2(0,0));
                         rotsgn.at(1) = std::copysign(1.,HiggsRotHessiv2(1,1));
                     }
-                    else if ( std::abs(std::abs(HiggsRotHessiv2(0,1)) -1) < roteps )
+                    else if ( max_element == std::abs(HiggsRotHessiv2(0,1)))
                     {
                         diagm22sq = 0;
                         rotsgn.at(0) = std::copysign(1.,HiggsRotHessiv2(0,1));
@@ -705,6 +741,7 @@ try
                 }
                 rotsgn_T = rotsgn;
                 diagm22sq_T = diagm22sq;
+                std::cout << "rotsgn = " << rotsgn << std::endl;
 
 
             }
