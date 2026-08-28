@@ -59,6 +59,10 @@ if(BSMPTBuildExecutables)
   target_link_libraries(CalcCT Models Utility)
   target_compile_features(CalcCT PUBLIC cxx_std_17)
 
+  add_executable(CalcEWSR prog/CalcEWSR.cpp)
+  target_link_libraries(CalcEWSR Utility GW MinimumTracer TransitionTracer)
+  target_compile_features(CalcEWSR PUBLIC cxx_std_17)
+
   add_executable(ThermalMasses prog/ThermalMasses.cpp)
   target_link_libraries(ThermalMasses Utility GW MinimumTracer TransitionTracer)
   target_compile_features(ThermalMasses PUBLIC cxx_std_17)
