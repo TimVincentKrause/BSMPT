@@ -79,4 +79,81 @@ HessianNumerical(const std::vector<double> &phi,
 
   return result;
 }
+
+
+double
+Deriv2Numerical(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps,
+               const size_t &i,
+               const size_t &j)
+{
+  double result = 0;
+
+  std::vector<double> l_jp2_ip2 = phi;
+  l_jp2_ip2[j] += 2 * eps;
+  l_jp2_ip2[i] += 2 * eps;
+  std::vector<double> l_jp2_ip1 = phi;
+  l_jp2_ip1[j] += 2 * eps;
+  l_jp2_ip1[i] += eps;
+  std::vector<double> l_jp2_im1 = phi;
+  l_jp2_im1[j] += 2 * eps;
+  l_jp2_im1[i] -= eps;
+  std::vector<double> l_jp2_im2 = phi;
+  l_jp2_im2[j] += 2 * eps;
+  l_jp2_im2[i] -= 2 * eps;
+
+
+  std::vector<double> l_jp1_ip2 = phi;
+  l_jp1_ip2[j] += eps;
+  l_jp1_ip2[i] += 2 * eps;
+  std::vector<double> l_jp1_ip1 = phi;
+  l_jp1_ip1[j] += eps;
+  l_jp1_ip1[i] += eps;
+  std::vector<double> l_jp1_im1 = phi;
+  l_jp1_im1[j] += eps;
+  l_jp1_im1[i] -= eps;
+  std::vector<double> l_jp1_im2 = phi;
+  l_jp1_im2[j] += eps;
+  l_jp1_im2[i] -= 2 * eps;
+
+
+  std::vector<double> l_jm1_ip2 = phi;
+  l_jm1_ip2[j] -= eps;
+  l_jm1_ip2[i] += 2 * eps;
+  std::vector<double> l_jm1_ip1 = phi;
+  l_jm1_ip1[j] -= eps;
+  l_jm1_ip1[i] += eps;
+  std::vector<double> l_jm1_im1 = phi;
+  l_jm1_im1[j] -= eps;
+  l_jm1_im1[i] -= eps;
+  std::vector<double> l_jm1_im2 = phi;
+  l_jm1_im2[j] -= eps;
+  l_jm1_im2[i] -= 2 * eps;
+
+
+  std::vector<double> l_jm2_ip2 = phi;
+  l_jm2_ip2[j] -= 2 * eps;
+  l_jm2_ip2[i] += 2 * eps;
+  std::vector<double> l_jm2_ip1 = phi;
+  l_jm2_ip1[j] -= 2 * eps;
+  l_jm2_ip1[i] += eps;
+  std::vector<double> l_jm2_im1 = phi;
+  l_jm2_im1[j] -= 2 * eps;
+  l_jm2_im1[i] -= eps;
+  std::vector<double> l_jm2_im2 = phi;
+  l_jm2_im2[j] -= 2 * eps;
+  l_jm2_im2[i] -= 2 * eps;
+
+  result -=     (-f(l_jp2_ip2) + 8 * f(l_jp2_ip1) - 8 * f(l_jp2_im1) + f(l_jp2_im2));
+  result += 8 * (-f(l_jp1_ip2) + 8 * f(l_jp1_ip1) - 8 * f(l_jp1_im1) + f(l_jp1_im2));
+  result -= 8 * (-f(l_jm1_ip2) + 8 * f(l_jm1_ip1) - 8 * f(l_jm1_im1) + f(l_jm1_im2));
+  result +=     (-f(l_jm2_ip2) + 8 * f(l_jm2_ip1) - 8 * f(l_jm2_im1) + f(l_jm2_im2));
+
+
+  return result / (12 * eps) / (12 * eps);
+}
+
 } // namespace BSMPT
+
+
