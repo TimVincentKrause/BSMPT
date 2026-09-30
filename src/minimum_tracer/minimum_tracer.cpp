@@ -9,6 +9,7 @@
 
 #include <BSMPT/minimum_tracer/minimum_tracer.h>
 #include <BSMPT/utility/NumericalDerivatives.h>
+#include <string>
 
 using namespace Eigen;
 
@@ -128,6 +129,9 @@ double MinimumTracer::SmallestEigenvalue(
 {
   std::size_t dim                                  = point.size();
   std::vector<std::vector<double>> current_hessian = Hessian(point);
+
+  // std::cout << "current Hessian" << std::endl;
+  // std::cout << current_hessian << std::endl;
 
   Eigen::MatrixXcd mat(dim, dim);
   for (std::size_t i = 0; i < dim; i++)
@@ -577,11 +581,11 @@ MinimumTracer::TrackPhase(const std::vector<double> &point_In,
       }
         return grad;
     };
-    
+
     //Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, 0.4); };
     Hessian = [=](auto const &arg) -> std::vector<std::vector<double>>
     {
-      size_t n = arg.size();        
+      size_t n = arg.size();
       std::vector<std::vector<double>> H(n, std::vector<double>(n, 0.0));
       for (size_t i = 0; i < n; ++i)
       {
@@ -1234,6 +1238,7 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
   double Tmax                        = 1e10;
   std::vector<double> gradient, stationary_point;
   size_t dim = this->modelPointer->get_nVEV();
+  //size_t dim = 5; //EU!!!
   std::vector<double> point(dim, 0);
 
   Eigen::VectorXd GradientEigen;
@@ -1246,7 +1251,7 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
   Logger::Write(LoggingLevel::MinTracerDetailed,
                 "Starting symmetry restoration check");
 
-  for (double exponentT = 0; exponentT <= log(Tmax);
+  for (double exponentT = log(1e3); exponentT <= log(Tmax);
        exponentT += log(Tmax) / (20 * log(Tmax)))
   {
     T = exp(exponentT);
@@ -1260,33 +1265,9 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
     };
 
     dV = [=](auto const &arg) { return NablaNumerical(arg, V, eps); };
-    // dV = [&](std::vector<double> arg)
-    // {
-    //     std::vector<double> res = this->modelPointer->MinimizeOrderVEV(arg);
-    //     std::vector<double> grad(arg.size());
-    //     double norm = 1.0 / (1.0 + T * T);
 
-    //     for (size_t i = 0; i < arg.size(); i++){
-    //         grad[i] = this->modelPointer->VEff(res, T, 5) * norm;
-    //   }
-    //     return grad;
-    // };
-    
     Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, eps); };
-    // Hessian = [=](auto const &arg) -> std::vector<std::vector<double>>
-    // {
-    //   size_t n = arg.size();        
-    //   std::vector<std::vector<double>> H(n, std::vector<double>(n, 0.0));
-    //   for (size_t i = 0; i < n; ++i)
-    //   {
-    //     auto fi = [&](std::vector<double> a) -> double { return dV(a)[i]; };
-    //     std::vector<double> row = NablaNumerical(arg, fi, eps);
-    //     for (size_t j = 0; j < n; ++j){
-    //       H[i][j] = row[j];
-    //     }
-    //   }
-    //   return H;
-    // };
+
 
     ActualSmallestEigenvalue = SmallestEigenvalue(point, Hessian);
 
@@ -1308,7 +1289,6 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
     EvenOlderSmallestEigenvalue = OldSmallestEigenvalue;
     OldSmallestEigenvalue       = ActualSmallestEigenvalue;
   }
-
   if (GradientEigen.size() == 0) return 0; // Convergence was never met
 
   if (ActualSmallestEigenvalue < 0) // Potential is not positively definite.
@@ -2775,7 +2755,7 @@ void Vacuum::setCoexRegion(const MultiStepPTMode &MultiStepPTMode)
                           std::to_string(T_high_hole) + " GeV!");
         status_vacuum = StatusTracing::NoCoverage;
 
-        //EU!!! 
+        //EU!!!
         //For very small gaps: skip patching and force Tc directly to a gap endpoint.
         const double TinyGapForceTcThreshold = 1.0; //EU!!! (GeV)
         double gap_size = std::abs(T_high_hole - T_low_hole);

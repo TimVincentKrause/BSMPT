@@ -26,7 +26,7 @@ using namespace Eigen;
 
 namespace BSMPT
 {
-  
+
 // Initialize static thermal tables
 BSMPT::ThermalFunctions::ThermalFunctionTables Class_Potential_Origin::m_thermalTables;
 bool Class_Potential_Origin::m_thermalTablesInitialized = false;
@@ -156,23 +156,23 @@ double Class_Potential_Origin::boson(double MassSquared,
   }
 
   if (diff >= 0) {//res = CWTerm(std::abs(MassSquared), cb, diff);
-                  res = CWTerm(MassSquared, cb, diff); //Carlo correction here, old implementation above 
+                  res = CWTerm(MassSquared, cb, diff); //Carlo correction here, old implementation above
                   //std::cout << " *************** boson CW term : " << CWTerm(MassSquared, cb, diff);  //debug Carlo
                 }
   if (Temp == 0) return res;
   double Ratio = MassSquared / std::pow(Temp, 2);
-  
-  if (diff == 0){ 
+
+  if (diff == 0){
     //res += std::pow(Temp, 4) / (2 * std::pow(M_PI, 2)) * ThermalFunctions::JbosonInterpolated(Ratio);
     res += std::pow(Temp, 4) / (2 * std::pow(M_PI, 2)) * m_thermalTables.JB(Ratio);
   }
-  
+
   //else if (diff == 1)
   else if (diff > 0) // Carlo correction
-  { 
+  {
     //res += std::pow(Temp, 2) / (2 * std::pow(M_PI, 2)) * ThermalFunctions::JbosonNumericalIntegration(Ratio, 1);
     res += std::pow(Temp, 2) / (2 * std::pow(M_PI, 2)) * m_thermalTables.DJB(Ratio);
-    //std::cout << " *** debug Thermal : " << MassSquared << " " << Ratio << " " << ThermalFunctions::JbosonNumericalIntegration(Ratio, 1) << std::endl; 
+    //std::cout << " *** debug Thermal : " << MassSquared << " " << Ratio << " " << ThermalFunctions::JbosonNumericalIntegration(Ratio, 1) << std::endl;
   }
   else if (diff == -1)
   {
@@ -200,7 +200,7 @@ Class_Potential_Origin::fermion(double MassSquared, double Temp, int diff) const
                   }
   double Ratio = MassSquared / std::pow(Temp, 2);
   if (Temp == 0) return res;
-  
+
   if (diff == 0)
   {
     //res += std::pow(Temp, 4) / (2 * std::pow(M_PI, 2)) *
@@ -208,7 +208,7 @@ Class_Potential_Origin::fermion(double MassSquared, double Temp, int diff) const
     res += std::pow(Temp, 4) / (2 * std::pow(M_PI, 2)) *
            m_thermalTables.JF(Ratio);
   }
-          
+
   //else if (diff == 1)
   else if (diff > 0) //Carlo correction
   {
@@ -3767,15 +3767,24 @@ void Class_Potential_Origin::CalculateDebye(bool forceCalculation)
     {
       for (std::size_t j = i; j < NHiggs; j++)
       {
+        if (i == j)
+        {
+            std::cout << "start -" << i << "," << j << std::endl;
+        }
+
         DebyeHiggs[i][j] = 0;
         for (std::size_t k = 0; k < NHiggs; k++)
         {
           DebyeHiggs[i][j] += 0.5 * Curvature_Higgs_L4[i][j][k][k] / 12.0;
         }
+        if (i == j)
+            std::cout << DebyeHiggs[i][j] << std::endl;
         for (std::size_t k = 0; k < NGauge; k++)
         {
           DebyeHiggs[i][j] += 3 * 0.5 * Curvature_Gauge_G2H2[k][k][i][j] / 12.0;
         }
+        if (i == j)
+            std::cout << DebyeHiggs[i][j] << std::endl;
 
         for (std::size_t a = 0; a < NQuarks; a++)
         {
@@ -3789,6 +3798,8 @@ void Class_Potential_Origin::CalculateDebye(bool forceCalculation)
             DebyeHiggs[i][j] += 6.0 / 24.0 * tmp;
           }
         }
+        if (i == j)
+            std::cout << DebyeHiggs[i][j] << std::endl;
 
         for (std::size_t a = 0; a < NLepton; a++)
         {
@@ -3802,6 +3813,8 @@ void Class_Potential_Origin::CalculateDebye(bool forceCalculation)
             DebyeHiggs[i][j] += 2.0 / 24.0 * tmp;
           }
         }
+        if (i == j)
+            std::cout << DebyeHiggs[i][j] << std::endl;
 
         //	            if(i==j) DebyeHiggs[i][j] *= 0.5;
       }
@@ -3823,6 +3836,8 @@ void Class_Potential_Origin::CalculateDebye(bool forceCalculation)
       }
     }
   }
+  std::cout << "Debye Higgs" << std::endl;
+  std::cout << DebyeHiggs << std::endl;
 }
 
 void Class_Potential_Origin::CalculateDebyeGauge()
@@ -3845,6 +3860,7 @@ void Class_Potential_Origin::CalculateDebyeGauge()
       nGaugeHiggs++;
     }
   }
+  std::cout << "nGaugeHiggs" << nGaugeHiggs << std::endl;
   for (std::size_t i = 0; i < NGauge; i++)
   {
     double GaugeFac = 0;
@@ -3863,6 +3879,8 @@ void Class_Potential_Origin::CalculateDebyeGauge()
       if (std::abs(DebyeGauge[i][j]) <= 1e-5) DebyeGauge[i][j] = 0;
     }
   }
+  std::cout << "Debye Gauge" << std::endl;
+  std::cout << DebyeGauge << std::endl;
 }
 
 void Class_Potential_Origin::initVectors()

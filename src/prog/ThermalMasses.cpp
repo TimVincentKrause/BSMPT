@@ -194,6 +194,7 @@ try
                  args.UseMultiStepPTMode,
                  args.num_check_pts);
 
+    std::cout << "hell" <<std::endl;
       Logger::Write(LoggingLevel::ProgDetailed,
                     "Found and traced " +
                         std::to_string(vac.PhasesList.size()) +
@@ -236,22 +237,6 @@ try
       for (std::size_t j = 0; j < modelPointer->get_NGauge(); j++)
         LegendMinima.push_back("mG_" + to_string(j) + "sq_T");
 
-      /*
-      for (std::size_t j = 0; j < 3; j++){
-        for (std::size_t k = 0; k < 3; k++)
-          LegendMinima.push_back("MS_" + to_string(j) + to_string(k));
-      }
-      // Hessian diagonals
-      for (std::size_t j = 0; j < 3; j++){
-        for (std::size_t k = 0; k < 3; k++)
-          LegendMinima.push_back("VeffHess_" + to_string(j)+ to_string(k));
-      }
-      */
-      // // Rotation Matrix before checking of convention
-      // for (std::size_t j = 0; j < 3; j++){
-      //   for (std::size_t k = 0; k < 3; k++)
-      //     LegendMinima.push_back("Rbf" + to_string(j) + to_string(k));
-      // }
       // thermal masses
       LegendMinima.push_back("m_thm_Gmsq");
       LegendMinima.push_back("m_thm_Gpsq");
@@ -307,7 +292,6 @@ try
       {
         outfile << std::setprecision(16);
         outfile << save_numb;
-        //outfile << sep << parameters.second;
         outfile << sep << status_nlostable;
         outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
@@ -321,74 +305,55 @@ try
       }
 
 
+
+      // more percision after critical Temperature
+      double dT_perc = 0.1;
+      double n_perc = 50;
+
+      double Tcrit = vac.CoexPhasesList.at(0).crit_temp;
+      std::cout << "Tcrit = " << Tcrit << std::endl;
+
+
+
       std::vector<double> T_list;
 
       for (int n = 0; n < args.npoints; n++)
-        T_list.push_back(args.templow +
-                         n * (args.temphigh - args.templow) / args.npoints);
+      {
+        double tmpT = args.templow +
+                         n * (args.temphigh - args.templow) / args.npoints;
 
-      // std::cout << "tcrit=" << vac.CoexPhasesList.at(0).crit_temp << std::endl;
-      double Tcrit = vac.CoexPhasesList.at(0).crit_temp;
-      std::cout << "Tcrit = " << Tcrit << std::endl;
+        if (tmpT > Tcrit)
+          break;
+
+        T_list.push_back(tmpT);
+      }
+
+      int n_done = T_list.size();
+
       if (vac.PhasesList.size() == 2)
       {
         T_list.insert(std::lower_bound(T_list.begin(),
                                       T_list.end(),
-                                      vac.CoexPhasesList.at(0).crit_temp),
-                      vac.CoexPhasesList.at(0).crit_temp);
+                                      Tcrit), Tcrit);
       }
 
+      
+      for (int n = 0; n < n_perc; n++)
+      {
+        double tmpT = Tcrit + n * dT_perc;
+        T_list.push_back(tmpT);
+      }
 
-      // Determine end of phase tranisiton evolution
-      //
+      for (int n=n_done; n < args.npoints; n++)
+      {
+        double tmpT = args.templow +
+                         n * (args.temphigh - args.templow) / args.npoints;
 
-      // double eps = 0.2;
-      // double T246 = -1;
+        if (tmpT < T_list.back())
+          continue;
 
-
-      // std::vector<double> vevi,vevii,veviii;
-      // for (std::size_t i = 0; i < T_list.size(); i++) {
-      //     if (vac.PhasesList.size() == 2)
-      //     {
-      //       if (T_list.at(i) <= vac.CoexPhasesList.at(0).crit_temp)
-      //       { vevi = vac.PhasesList.at(1).Get(T_list.at(i)).point; }
-      //       else
-      //       { vevi = vac.PhasesList.at(0).Get(T_list.at(i)).point; }
-
-      //       if (T_list.at(i+1) <= vac.CoexPhasesList.at(0).crit_temp)
-      //       { vevi = vac.PhasesList.at(1).Get(T_list.at(i+1)).point; }
-      //       else
-      //       { vevi = vac.PhasesList.at(0).Get(T_list.at(i+1)).point; }
-
-      //       if (T_list.at(i+2) <= vac.CoexPhasesList.at(0).crit_temp)
-      //       { vevii = vac.PhasesList.at(1).Get(T_list.at(i+2)).point; }
-      //       else
-      //       { vevii = vac.PhasesList.at(0).Get(T_list.at(i+2)).point; }
-      //     }
-      //     else
-      //     {
-      //       vevi = vac.PhasesList.at(0).Get(T_list.at(i)).point;
-      //       vevii = vac.PhasesList.at(0).Get(T_list.at(i+1)).point;
-      //       veviii = vac.PhasesList.at(0).Get(T_list.at(i+2)).point;
-      //     }
-
-
-      //     if ((std::abs(vevi.at(0)-246.2) < eps) and (std::abs(vevii.at(0)-246.2) < eps) and (std::abs(veviii.at(0)-246.2) < eps))
-      //     {
-      //         T246 = T_list.at(i);
-      //     }
-
-      // }
-
-      // std::cout << "T246 = " << T246 << std::endl;
-      // std::vector<double> vev = vac.PhasesList.at(1).Get(0).point;
-
-      // std::vector<double> mHiggsT0 = modelPointer->HiggsMassesSquared(
-      //        modelPointer->MinimizeOrderVEV(vev), 0);
-
-      // double mH1 = mHiggsT0.at(4);
-
-
+        T_list.push_back(tmpT);
+      }    
 
 
       // these are needed later for correct rotation matrix after symmetry breaking
@@ -409,7 +374,6 @@ try
       {
         outfile << std::setprecision(16);
         outfile << save_numb;
-        //outfile << sep << parameters.second;
         outfile << sep << status_nlostable;
         outfile << sep << status_ewsr;
         outfile << sep << vac.status_vacuum;
@@ -441,9 +405,6 @@ try
         outfile << sep
                 << modelPointer->HiggsMassesSquared(
                        modelPointer->MinimizeOrderVEV(vev), 0);
-        // outfile << sep
-        //         << modelPointer->HiggsMassesSquared(
-        //                modelPointer->MinimizeOrderVEV(vev), T);
         outfile << sep
                 << modelPointer->LeptonMassesSquared(
                        modelPointer->MinimizeOrderVEV(vev));
@@ -466,7 +427,6 @@ try
         for (std::size_t j = 0; j < 3; j++){
           for (std::size_t k = 0; k < 3; k++) {
               NeutralDSMatrix(j,k) = HiggsMassMatrix(6+j,6+k);
-              //outfile << sep << NeutralDSMatrix(j,k);
           }
         }
 
@@ -486,34 +446,13 @@ try
 
         for (std::size_t i = 0; i < modelPointer->get_NHiggs();i++)
         {
-            // dVeff/dw_i as a function
-            std::function<double(std::vector<double>)> dVeff;
-            dVeff = [&](std::vector<double> effvev)
-                {return NablaNumerical(effvev,Veff,eps).at(i);};
-
-            // set diagonals of Mass Matrix
-            Hessian(i,i) = NablaNumerical(modelPointer->MinimizeOrderVEV(vev),dVeff, eps).at(i);
-
-            // if index reaches neutral DS Mass Matrix -> add offdiagonals;
-            if ((i == 6) || (i == 7))
-            {
-                Hessian(i,8) = NablaNumerical(modelPointer->MinimizeOrderVEV(vev),dVeff, eps).at(8);
-                Hessian(8,i) = Hessian(i,8);
-            }
+          Hessian(i,i) = Deriv2Numerical(modelPointer->MinimizeOrderVEV(vev),Veff, eps,i,i);
         }
 
-        // std::vector<std::vector<double>> TestNumdiff = HessianNablaNumerical(modelPointer->MinimizeOrderVEV(vev),Veff,eps);
-
-        // MatrixXd TestMatrix(modelPointer->get_NHiggs(),modelPointer->get_NHiggs());
-        // for (std::size_t j = 0; j < modelPointer->get_NHiggs(); j++){
-        //   for (std::size_t k = 0; k < modelPointer->get_NHiggs(); k++) {
-        //       TestMatrix(j,k) = TestNumdiff.at(j).at(k);
-        //   }
-        // }
-
-        // std::cout << "--- T = " << T << " ---" << std::endl;
-        // std::cout << TestMatrix << std::endl;
-
+        Hessian(6,8) = Deriv2Numerical(modelPointer->MinimizeOrderVEV(vev),Veff, eps,6,8);
+        Hessian(8,6) = Hessian(6,8);
+        Hessian(7,8) = Deriv2Numerical(modelPointer->MinimizeOrderVEV(vev),Veff, eps,7,8);
+        Hessian(8,7) = Hessian(7,8);
 
 
         for (std::size_t j = 0; j < 3; j++){
@@ -521,9 +460,7 @@ try
               NeutralDSHessian(j,k) = Hessian(6+j,6+k);
               if (((j == 0) and (k == 1)) or ((j == 1) and (k == 0))){
                   NeutralDSHessian(j,k) = 0;
-
               }
-              //outfile << sep << NeutralDSHessian(j,k);
           }
         }
 
@@ -552,37 +489,25 @@ try
 
             // this is known from mHsm << Dark Sector masses
             // (and DM can't be charged)
-            i_mG0 = 0; i_mGm = 1; i_mGp = 2; i_mHsm = 3; i_mH1 = 4;
+            // i_mG0 = 0; i_mGm = 1; i_mGp = 2; i_mHsm = 3; i_mH1 = 4;
 
-            // calculation of order of Higgs particles
-            double tmpmass = MassSquaredHiggsHessi[5];
+            // // calculation of order of Higgs particles
+            // double tmpmass = MassSquaredHiggsHessi[5];
 
-            i_mHp = 6;
+            // i_mHp = 6;
 
-            // std::cout << "-----" << std::endl;
-            // std::cout << "T = " << T << std::endl;
-            // std:: cout << MassSquaredHiggsHessi << std::endl;
+            // while (i_mHp<8){
 
-            while (i_mHp<8){
-            // std::cout << "tmpmass = " << tmpmass << std::endl;
-            // std::cout << "nmass = " << MassSquaredHiggsHessi[i_mHp] << std::endl;
-            // std::cout << "diff = " << std::abs(tmpmass - MassSquaredHiggsHessi[i_mHp])/MassSquaredHiggsHessi[i_mHp] << std::endl;
+            // if (std::abs(tmpmass - MassSquaredHiggsHessi[i_mHp])/MassSquaredHiggsHessi[i_mHp] < 1e-5) {break;}
+            // else {tmpmass = MassSquaredHiggsHessi[i_mHp];}
+            // i_mHp++;
+            // }
 
-            if (std::abs(tmpmass - MassSquaredHiggsHessi[i_mHp])/MassSquaredHiggsHessi[i_mHp] < 1e-5) {break;}
-            else {tmpmass = MassSquaredHiggsHessi[i_mHp];}
-            i_mHp++;
-            }
+            // if      (i_mHp==6){i_mH2 = 7; i_mH3 = 8;}
+            // else if (i_mHp==7){i_mH2 = 5; i_mH3 = 8;}
+            // else if (i_mHp==8){i_mH2 = 5; i_mH3 = 6;}
 
-            if      (i_mHp==6){i_mH2 = 7; i_mH3 = 8;}
-            else if (i_mHp==7){i_mH2 = 5; i_mH3 = 8;}
-            else if (i_mHp==8){i_mH2 = 5; i_mH3 = 6;}
-
-            i_mHm = i_mHp - 1;
-            // std::cout << "i_mHp = " << i_mHp << std::endl;
-            // std::cout << "i_mH2 = " << i_mH2 << std::endl;
-            // std::cout << "i_mH3 = " << i_mH3 << std::endl;
-            // std::cout << "i_mHm = " << i_mHm << std::endl;
-
+            // i_mHm = i_mHp - 1;
 
             // for thermal rotation
             // this is known from mHsm << Dark Sector masses
@@ -590,7 +515,7 @@ try
             i_mG0_T = 0; i_mGm_T = 1; i_mGp_T = 2; i_mHsm_T = 3; i_mH1_T = 4;
 
             // calculation of order of Higgs particles
-            tmpmass = MassSquaredHiggsTherm[5];
+            double tmpmass = MassSquaredHiggsTherm[5];
 
             i_mHp_T = 6;
 
@@ -605,51 +530,40 @@ try
 
             i_mHm_T = i_mHp_T - 1;
 
+
+            // Order of daisy masses and potential masses should be the same
+            i_mG0 = i_mG0_T;
+            i_mGp = i_mGp_T;
+            i_mGm = i_mGm_T;
+            i_mHsm= i_mHsm_T;
+
+            i_mH1 = i_mH1_T;
+            i_mH2 = i_mH2_T;
+            i_mH3 = i_mH3_T;
+
+            i_mHp = i_mHp_T;
+            i_mHm = i_mHm_T;
+
+
             // Diagonalisation of DM-Mass Matrix
             es.compute(NeutralDSHessian);
             HiggsRotHessi = es.eigenvectors().transpose();
             es.compute(NeutralDSMatrix);
             HiggsRotTherm = es.eigenvectors().transpose();
 
-            // std::cout << "T = " << T << std::endl;
-
-
-            // std::cout << "NeutralDSHessian" << std::endl;
-            // std::cout << NeutralDSHessian << std::endl;
-
-
-
-            // std::cout << "HiggsRotHessi - before " << std::endl;
-            // std::cout << HiggsRotHessi << std::endl;
-
             // Set correct parametrisation
             if (HiggsRotHessi(0,0) < 0)          {HiggsRotHessi.row(0) *= -1;}
 
-            // std::cout << "HiggsRotHessi - 0 check " << std::endl;
-            // std::cout << HiggsRotHessi << std::endl;
 
             if (HiggsRotHessi(2,2) < 0)          {HiggsRotHessi.row(2) *= -1;}
 
-            // std::cout << "HiggsRotHessi - 2 check " << std::endl;
-            // std::cout << HiggsRotHessi << std::endl;
-
 
             if (HiggsRotHessi.determinant() < 0) {HiggsRotHessi.row(1) *= -1;}
-
-            // std::cout << "HiggsRotHessi - 2 check " << std::endl;
-            // std::cout << HiggsRotHessi << std::endl;
 
 
             if (HiggsRotTherm(0,0) < 0)          {HiggsRotTherm.row(0) *= -1;}
             if (HiggsRotTherm(2,2) < 0)          {HiggsRotTherm.row(2) *= -1;}
             if (HiggsRotTherm.determinant() < 0) {HiggsRotTherm.row(1) *= -1;}
-
-            // std::cout << "HiggsRotHessi" << std::endl;
-            // std::cout << HiggsRotHessi << std::endl;
-
-            // std::cout << " --- T =  " << T << " --- " << std::endl;
-            // std::cout << "RotHessi - v " << std::endl;
-            // std::cout << HiggsRotHessi << std::endl;
 
             // save diagonalisation for smoothness of matrix values
             // before phase transition
@@ -685,7 +599,6 @@ try
                 for (std::size_t j = 0; j < 3; j++){
                     for (std::size_t k = 0; k < 3; k++) {
                         NeutralDSHessianv2(j,k) = Hessianv2(6+j,6+k);
-                        //outfile << sep << NeutralDSHessian(j,k);
                     }
                 }
 
@@ -698,10 +611,6 @@ try
                 if (HiggsRotHessiv2(0,0) < 0)          {HiggsRotHessiv2.row(0) *= -1;}
                 if (HiggsRotHessiv2(2,2) < 0)          {HiggsRotHessiv2.row(2) *= -1;}
                 if (HiggsRotHessiv2.determinant() < 0) {HiggsRotHessiv2.row(1) *= -1;}
-
-                // std::cout << "T = " << T << std::endl;
-                // std::cout << NeutralDSHessian << std::endl;
-                // std::cout << HiggsRotHessiv2 << std::endl;
 
                 if (mSsq < m22sq)
                 {
@@ -810,25 +719,6 @@ try
                 }
             }
         }
-
-        // std::cout << "----------------------" << std::endl;
-        // std::cout << "T = " << T << "GeV" << std::endl;
-        // std::cout << "v = " << vev << "GeV" << std::endl;
-        // bool tmpbol = (mSsq < m22sq);
-        // std::cout << "mSsq < m22sq = " << tmpbol << std::endl;
-        // std::cout << "diagm22sq = " << diagm22sq << std::endl;
-        // std::cout << "rotsgn = " << rotsgn << std::endl;
-
-        // std::cout << HiggsRotHessi << std::endl;
-
-        // std::cout << "diagm22sq_T = " << diagm22sq_T << std::endl;
-        // std::cout << "rotsgn_T = " << rotsgn_T << std::endl;
-
-        // std::cout << HiggsRotTherm << std::endl;
-        //
-        //
-        // std::cout << "RotHessi - b " << std::endl;
-        // std::cout << HiggsRotHessi << std::endl;
 
         // thermal masses
 

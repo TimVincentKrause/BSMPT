@@ -1035,7 +1035,7 @@ public:
                    double MassSquaredC,
                    double MassSquaredD) const;
 
-  /** 
+  /**
    * Calculates the counterterm parameters. Here you need to work out the scheme
    * and implement the formulas. This has to be specified in the model file.
    */

@@ -53,4 +53,13 @@ std::vector<std::vector<double>>
 HessianNumerical(const std::vector<double> &phi,
                  const std::function<double(std::vector<double>)> &V,
                  double eps);
+
+
+double
+Deriv2Numerical(const std::vector<double> &phi,
+               const std::function<double(std::vector<double>)> &f,
+               const double &eps,
+               const size_t &i,
+               const size_t &j);
+
 } // namespace BSMPT
