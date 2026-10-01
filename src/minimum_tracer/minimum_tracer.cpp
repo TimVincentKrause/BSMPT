@@ -1237,12 +1237,7 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
   double treshold                    = 1e-6;
   double Tmax                        = 1e10;
   std::vector<double> gradient, stationary_point;
-<<<<<<< HEAD
   size_t dim = this->modelPointer->get_nVEV();
-  //size_t dim = 5; //EU!!!
-=======
-  size_t dim = 5;//this->modelPointer->get_nVEV(); //EU!!!
->>>>>>> 5454ab94ec1f4ae4409465cb811ed955fee12d7f
   std::vector<double> point(dim, 0);
 
   Eigen::VectorXd GradientEigen;
@@ -1255,14 +1250,6 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
   Logger::Write(LoggingLevel::MinTracerDetailed,
                 "Starting symmetry restoration check");
 
-<<<<<<< HEAD
-=======
-  std::string lnTstring = "[";
-  std::string ASEstring = "[";
-  std::string c1string = "[";
-  std::string c2string = "[";
-
->>>>>>> 5454ab94ec1f4ae4409465cb811ed955fee12d7f
   for (double exponentT = log(1e3); exponentT <= log(Tmax);
        exponentT += log(Tmax) / (20 * log(Tmax)))
   {
@@ -1270,87 +1257,18 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
     // wrappers for potential, first and second numerical derivative
     V = [&](std::vector<double> vev)
     {
-      std::vector<double> res(9,0);  //EU!!!
-      res[2] = vev[0];
-      res[4] = vev[1];
-      res[6] = vev[2];
-      res[7] = vev[3];
-      res[8] = vev[4];  //EU!!!
+      std::vector<double> res = this->modelPointer->MinimizeOrderVEV(vev);
       if (C_UseParwani)
         return this->modelPointer->VEff(res, T) / (1 + T * T * log(T * T));
       return this->modelPointer->VEff(res, T) / (1 + T * T);
     };
 
     dV = [=](auto const &arg) { return NablaNumerical(arg, V, eps); };
-<<<<<<< HEAD
 
     Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, eps); };
 
-=======
-    /*
-    dV = [&](std::vector<double> arg)
-    {
-        std::vector<double> res = this->modelPointer->MinimizeOrderVEV(arg);
-        std::vector<double> grad(arg.size());
-        double norm;
-
-        if (C_UseParwani)
-          norm = 1.0 / (1 + T * T * log(T * T));
-        norm = 1.0 / (1.0 + T * T);
-
-        for (size_t i = 0; i < arg.size(); i++){
-            grad[i] = this->modelPointer->VEff(res, T, 5) * norm;
-      }
-        return grad;
-    };
-    */
-
-    Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, eps); };
-    //Hessian = [=](auto const &arg) { return HessianNumerical(arg, V, 0.4); };
-    /*
-    Hessian = [=](auto const &arg) -> std::vector<std::vector<double>>
-    {
-      size_t n = arg.size();        
-      std::vector<std::vector<double>> H(n, std::vector<double>(n, 0.0));
-      for (size_t i = 0; i < n; ++i)
-      {
-        auto fi = [&](std::vector<double> a) -> double { return dV(a)[i]; };
-        std::vector<double> row = NablaNumerical(arg, fi, eps);
-        for (size_t j = 0; j < n; ++j){
-          H[i][j] = row[j];
-        }
-      }
-      return H;
-    };
-    */
->>>>>>> 5454ab94ec1f4ae4409465cb811ed955fee12d7f
 
     ActualSmallestEigenvalue = SmallestEigenvalue(point, Hessian);
-
-    std::string expTstr;
-    std::stringstream expT;
-    expT << exponentT;
-    expT >> expTstr;
-    lnTstring += expTstr + ",";
-    
-
-    std::string ASE;
-    std::stringstream ASEstream;
-    ASEstream << ActualSmallestEigenvalue;
-    ASEstream >> ASE;
-    ASEstring += ASE + ",";
-
-    std::string c1str;
-    std::stringstream c1stream;
-    c1stream << abs(ActualSmallestEigenvalue / OldSmallestEigenvalue - 1);
-    c1stream >> c1str;
-    c1string += c1str + ",";
-
-    std::string c2str;
-    std::stringstream c2stream;
-    c2stream << abs(ActualSmallestEigenvalue / EvenOlderSmallestEigenvalue - 1);
-    c2stream >> c2str;
-    c2string += c2str + ",";
 
     if (abs(ActualSmallestEigenvalue / OldSmallestEigenvalue - 1) < treshold and
         abs(ActualSmallestEigenvalue / EvenOlderSmallestEigenvalue - 1) <
@@ -1358,8 +1276,6 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
     {
       // Save into Eigen objects
       gradient      = dV(point);
-      // std::cout << "gradfirst = " << gradient << std::endl;
-      // std::cout << "hessfirst = " << Hessian(point) << std::endl;
       GradientEigen = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(
           gradient.data(), gradient.size());
       for (std::size_t i = 0; i < dim; i++)
@@ -1370,29 +1286,9 @@ int MinimumTracer::IsThereEWSymmetryRestoration()
       break;
     }
 
-    // std::cout << "---" << std::endl;
-    // std::cout << "T = " << T << std::endl;
-
-    // std::cout << "gradient = " << gradient << std::endl;
-    // std::cout << "HessianEigen = " << std::endl;
-    // std::cout << HessianEigen << std::endl;
-    // std::cout << "EvenOlderSmallestEigenvalue = " << EvenOlderSmallestEigenvalue << std::endl;
-    // std::cout << "OldSmallestEigenvalue = " << OldSmallestEigenvalue << std::endl;
-    // std::cout << "ActualSmallestEigenvalue = " << ActualSmallestEigenvalue << std::endl;
-
     EvenOlderSmallestEigenvalue = OldSmallestEigenvalue;
     OldSmallestEigenvalue       = ActualSmallestEigenvalue;
   }
-<<<<<<< HEAD
-=======
-
-  std::cout << "lnT" << lnTstring << "]Tnl" << std::endl;
-  std::cout << "ASE" << ASEstring << "]ESA" <<std::endl;
-  std::cout << "c1" << c1string << "]1c" <<std::endl;
-  std::cout << "c2" << c2string << "]2c" <<std::endl;
-
-
->>>>>>> 5454ab94ec1f4ae4409465cb811ed955fee12d7f
   if (GradientEigen.size() == 0) return 0; // Convergence was never met
 
   if (ActualSmallestEigenvalue < 0) // Potential is not positively definite.
