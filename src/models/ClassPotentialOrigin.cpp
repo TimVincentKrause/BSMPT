@@ -3767,24 +3767,15 @@ void Class_Potential_Origin::CalculateDebye(bool forceCalculation)
     {
       for (std::size_t j = i; j < NHiggs; j++)
       {
-        if (i == j)
-        {
-            std::cout << "start -" << i << "," << j << std::endl;
-        }
-
         DebyeHiggs[i][j] = 0;
         for (std::size_t k = 0; k < NHiggs; k++)
         {
           DebyeHiggs[i][j] += 0.5 * Curvature_Higgs_L4[i][j][k][k] / 12.0;
         }
-        if (i == j)
-            std::cout << DebyeHiggs[i][j] << std::endl;
         for (std::size_t k = 0; k < NGauge; k++)
         {
           DebyeHiggs[i][j] += 3 * 0.5 * Curvature_Gauge_G2H2[k][k][i][j] / 12.0;
         }
-        if (i == j)
-            std::cout << DebyeHiggs[i][j] << std::endl;
 
         for (std::size_t a = 0; a < NQuarks; a++)
         {
@@ -3798,8 +3789,6 @@ void Class_Potential_Origin::CalculateDebye(bool forceCalculation)
             DebyeHiggs[i][j] += 6.0 / 24.0 * tmp;
           }
         }
-        if (i == j)
-            std::cout << DebyeHiggs[i][j] << std::endl;
 
         for (std::size_t a = 0; a < NLepton; a++)
         {
@@ -3813,8 +3802,6 @@ void Class_Potential_Origin::CalculateDebye(bool forceCalculation)
             DebyeHiggs[i][j] += 2.0 / 24.0 * tmp;
           }
         }
-        if (i == j)
-            std::cout << DebyeHiggs[i][j] << std::endl;
 
         //	            if(i==j) DebyeHiggs[i][j] *= 0.5;
       }
@@ -3836,8 +3823,6 @@ void Class_Potential_Origin::CalculateDebye(bool forceCalculation)
       }
     }
   }
-  std::cout << "Debye Higgs" << std::endl;
-  std::cout << DebyeHiggs << std::endl;
 }
 
 void Class_Potential_Origin::CalculateDebyeGauge()
@@ -3860,7 +3845,6 @@ void Class_Potential_Origin::CalculateDebyeGauge()
       nGaugeHiggs++;
     }
   }
-  std::cout << "nGaugeHiggs" << nGaugeHiggs << std::endl;
   for (std::size_t i = 0; i < NGauge; i++)
   {
     double GaugeFac = 0;
@@ -3879,8 +3863,6 @@ void Class_Potential_Origin::CalculateDebyeGauge()
       if (std::abs(DebyeGauge[i][j]) <= 1e-5) DebyeGauge[i][j] = 0;
     }
   }
-  std::cout << "Debye Gauge" << std::endl;
-  std::cout << DebyeGauge << std::endl;
 }
 
 void Class_Potential_Origin::initVectors()
